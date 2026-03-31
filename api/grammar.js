@@ -5,8 +5,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const body = req.body || {};
-        const text = body.text;
+        const { text } = req.body || {};
 
         if (!text) {
             return res.status(200).json({ corrected: "" });
@@ -41,12 +40,20 @@ export default async function handler(req, res) {
             }
         );
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini Error:", errorText);
+
+            return res.status(500).json({
+                error: "Failed to process AI request"
+            });
+        }
+
         const data = await response.json();
 
         let corrected =
             data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-        // 🔥 CLEAN RESPONSE
         corrected = corrected
             .replace(/^\s*Sure.*?:/i, "")
             .replace(/\n/g, " ")
