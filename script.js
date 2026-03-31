@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     // ==========================
-    // INIT
+    // 1. INITIALIZATION
     // ==========================
     const speech = new SpeechSynthesisUtterance();
     let voices = [];
@@ -11,14 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const previewBox = document.getElementById("correctionPreview");
     const listenBtn = document.getElementById("listenBtn");
     const canvas = document.getElementById("posterCanvas");
-
     const translateBtn = document.getElementById("translateBtn");
     const translationResult = document.getElementById("translationResult");
-
     const fromLangSelect = document.getElementById("fromLang");
     const toLangSelect = document.getElementById("toLang");
     const swapBtn = document.getElementById("swapLang");
-
     const posterTheme = document.getElementById("posterTheme");
     const loading = document.getElementById("loading");
 
@@ -26,18 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let typingTimer;
     const delay = 800;
     let controller;
-
-    // ==========================
-    // SAFETY CHECK
-    // ==========================
-    function safe(el, name){
-        if(!el) console.error(`❌ Element #${name} tidak ditemukan`);
-        return el;
-    }
-
-    safe(voiceSelect,"voiceSelect");
-    safe(textarea,"inputText");
-    safe(listenBtn,"listenBtn");
 
     const themeBackgrounds = {
         sunset: "images/jayandaru.png",
@@ -47,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ==========================
-    // LANGUAGE LOGIC
+    // 2. LANGUAGE LOGIC
     // ==========================
     swapBtn?.addEventListener("click", () => {
         const temp = fromLangSelect.value;
@@ -55,14 +40,14 @@ document.addEventListener("DOMContentLoaded", () => {
         toLangSelect.value = temp;
     });
 
-    function detectLanguage(text){
-        const indonesianWords = ["saya","nama","kamu","dia","makan","minum","halo","ini"];
+    function detectLanguage(text) {
+        const indonesianWords = ["saya","nama","kamu","dia","makan","minum","halo","ini","adalah","di"];
         const lower = text.toLowerCase();
         return indonesianWords.some(word => lower.includes(word)) ? "id" : "en";
     }
 
     // ==========================
-    // SPEECH ENGINES
+    // 3. SPEECH ENGINE
     // ==========================
     const loadVoices = () => {
         voices = window.speechSynthesis.getVoices();
@@ -89,12 +74,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================
-    // TRANSLATE (Fixed Global Variable)
+    // 4. TRANSLATE ENGINE
     // ==========================
     translateBtn?.addEventListener("click", async () => {
         if(!textarea || !translationResult) return;
         const text = textarea.value.trim();
-        if (!text) return alert("Please write text first!");
+        if (!text) return;
 
         translationResult.innerHTML = "⌛ Translating...";
 
@@ -108,21 +93,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`);
             const data = await res.json();
             
-            // Simpan ke variabel global agar drawPoster bisa baca
-            translatedText = data?.responseData?.translatedText || "Translation not available";
+            translatedText = data?.responseData?.translatedText || "Translation error";
 
             translationResult.innerHTML = `
-                🌍 Detected: <b>${from.toUpperCase()}</b><br>
-                🌍 Translation: <b>${translatedText}</b>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px;">
+                    <small>Detected: ${from.toUpperCase()}</small><br>
+                    <strong>${translatedText}</strong>
+                </div>
             `;
         } catch (error) {
             translationResult.innerHTML = "❌ Translation failed";
-            console.error(error);
         }
     });
 
     // ==========================
-    // GRAMMAR AI (More Robust)
+    // 5. GRAMMAR AI (FIXED PATH & VARIABLE)
     // ==========================
     textarea?.addEventListener("input", () => {
         clearTimeout(typingTimer);
@@ -132,17 +117,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function checkGrammarPreview(text) {
-        if (!text.trim() || !previewBox || !loading) {
+        if (!text.trim() || text.length < 5) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
         if (controller) controller.abort();
         controller = new AbortController();
-        loading.style.display = "block";
+        if(loading) loading.style.display = "block";
 
         try {
-            const response = await fetch("/api/grammar", {
+            // PERBAIKAN: Menggunakan path relatif 'api/grammar' agar lebih aman di Vercel
+            const response = await fetch('api/grammar', {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text }),
@@ -152,64 +138,63 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!response.ok) throw new Error("API Server Error");
 
             const data = await response.json();
-            const correctedText = data.corrected;
+            // PERBAIKAN: Nama properti harus 'correction' sesuai file grammar.js
+            const correctedText = data.correction;
 
-            loading.style.display = "none";
+            if(loading) loading.style.display = "none";
 
-            if (!correctedText || correctedText.toLowerCase() === text.toLowerCase().trim()) {
+            if (!correctedText || correctedText.toLowerCase().trim() === text.toLowerCase().trim()) {
                 previewBox.style.display = "none";
                 return;
             }
 
             previewBox.style.display = "block";
-            previewBox.innerHTML = `✨ AI Correction: <span style="color:#00ffd5;font-weight:bold;cursor:pointer;">${correctedText}</span>`;
+            previewBox.innerHTML = `✨ AI Correction: <span style="color:#00ffd5;font-weight:bold;cursor:pointer;text-decoration:underline;">${correctedText}</span>`;
 
             previewBox.onclick = () => {
                 textarea.value = correctedText;
                 previewBox.style.display = "none";
-                // Trigger translate ulang otomatis setelah koreksi
-                translateBtn.click();
+                translateBtn.click(); // Langsung translate ulang setelah dikoreksi
             };
 
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error("Grammar error:", error);
-                loading.style.display = "none";
-                previewBox.style.display = "none";
+                if(loading) loading.style.display = "none";
             }
         }
     }
 
     // ==========================
-    // POSTER ENGINE
+    // 6. POSTER ENGINE
     // ==========================
     async function drawPoster(text) {
         if(!canvas) return;
         const ctx = canvas.getContext("2d");
-        canvas.width = 800;
-        canvas.height = 1000;
-
+        
         const img = new Image();
         img.src = themeBackgrounds[posterTheme?.value] || themeBackgrounds.sunset;
 
         return new Promise((resolve) => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // Overlay Gelap
                 ctx.fillStyle = "rgba(0,0,0,0.6)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.textAlign = "center";
                 ctx.fillStyle = "white";
-                ctx.font = "bold 42px Arial";
-                ctx.fillText("English Learning Mode", canvas.width / 2, 100);
+                ctx.font = "bold 40px Arial";
+                ctx.fillText("English Learning Card", canvas.width / 2, 100);
 
                 // Original Text
                 ctx.fillStyle = "#00ffd5";
                 ctx.font = "bold 28px Arial";
-                ctx.fillText("Original Text", canvas.width / 2, 200);
+                ctx.fillText("Original Text", canvas.width / 2, 220);
                 ctx.fillStyle = "white";
                 ctx.font = "32px Arial";
-                wrapText(ctx, text, canvas.width / 2, 260, 700, 45);
+                wrapText(ctx, text, canvas.width / 2, 280, 700, 45);
 
                 // Translated Text
                 if (translatedText) {
@@ -244,17 +229,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.generatePoster = async function () {
         const text = textarea?.value.trim();
-        if (!text) return alert("Please write text first!");
+        if (!text) return alert("Write something first!");
         
-        // Pastikan terjemahan ada sebelum gambar dibuat
         if(!translatedText) {
             await translateBtn.click();
+            // Beri jeda sebentar agar fetch selesai
+            setTimeout(async () => {
+                canvas.style.display = "block";
+                await drawPoster(text);
+                listenBtn.click();
+            }, 1000);
+        } else {
+            canvas.style.display = "block";
+            await drawPoster(text);
+            listenBtn.click();
         }
-
-        canvas.style.display = "block";
-        await drawPoster(text);
-        
-        // Auto Speak
-        listenBtn.click();
     };
 });
