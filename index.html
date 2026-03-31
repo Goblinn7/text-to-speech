@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Text To Speech Converter</title>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="hero">
+
+<h1>Text To Speech <span>Converter</span></h1>
+
+<!-- LANGUAGE SWITCH -->
+<div class="language-bar">
+
+<select id="fromLang">
+<option value="auto">Auto Detect</option>
+<option value="id">Indonesian</option>
+<option value="en">English</option>
+</select>
+
+<button type="button" id="swapLang">⇄</button>
+
+<select id="toLang">
+<option value="en">English</option>
+<option value="id">Indonesian</option>
+</select>
+
+</div>
+
+<!-- TEXT INPUT -->
+<textarea id="inputText" placeholder="Write anything here..."></textarea>
+
+<!-- AI Correction -->
+<div id="correctionPreview" class="correction-box"></div>
+
+<!-- LOADING -->
+<div id="loading" style="display:none; margin-top:10px;">
+Processing...
+</div>
+
+<!-- CONTROL AREA -->
+<div class="row">
+
+<select id="voiceSelect"></select>
+
+<button type="button" id="listenBtn">Listen</button>
+<button type="button" id="translateBtn">Translate</button>
+
+<select id="posterTheme">
+<option value="sunset">Monumen Jayandaru</option>
+<option value="ocean">Candi Sumur</option>
+<option value="dark">Candi Dermo</option>
+<option value="nature">Candi Pari</option>
+</select>
+
+<button type="button" onclick="generatePoster()">
+Generate Poster
+</button>
+
+</div>
+
+<!-- TRANSLATION RESULT -->
+<div id="translationResult"></div>
+
+<!-- POSTER -->
+<canvas id="posterCanvas"
+width="1000"
+height="800"
+style="margin-top:30px; max-width:700px; width:100%; border-radius:15px;">
+</canvas>
+
+</div>
+
+<script src="script.js" defer></script>
+
+</body>
+</html>
