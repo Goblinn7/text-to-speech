@@ -49,8 +49,10 @@ export default async function handler(req, res) {
             });
         }
 
-        const data = await response.json();
+        const textResponse = await response.text();
+console.log("Gemini RAW:", textResponse);
 
+const data = JSON.parse(textResponse);
         let corrected =
             data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
