@@ -22,20 +22,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const posterTheme = document.getElementById("posterTheme");
     const loading = document.getElementById("loading");
 
-    let translatedText = "";
-    let detectedLang = "";
-
+    let translatedText = ""; 
     let typingTimer;
     const delay = 800;
     let controller;
 
     // ==========================
-    // SAFETY CHECK (ANTI ERROR)
+    // SAFETY CHECK
     // ==========================
     function safe(el, name){
-        if(!el){
-            console.error(`❌ Element #${name} tidak ditemukan`);
-        }
+        if(!el) console.error(`❌ Element #${name} tidak ditemukan`);
         return el;
     }
 
@@ -43,9 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
     safe(textarea,"inputText");
     safe(listenBtn,"listenBtn");
 
-    // ==========================
-    // BACKGROUND THEMES
-    // ==========================
     const themeBackgrounds = {
         sunset: "images/jayandaru.png",
         ocean: "images/candi_sumur.png",
@@ -54,259 +47,191 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ==========================
-    // LANGUAGE SWAP
+    // LANGUAGE LOGIC
     // ==========================
     swapBtn?.addEventListener("click", () => {
-        [fromLangSelect.value, toLangSelect.value] =
-        [toLangSelect.value, fromLangSelect.value];
+        const temp = fromLangSelect.value;
+        fromLangSelect.value = toLangSelect.value;
+        toLangSelect.value = temp;
     });
 
-    // ==========================
-    // SIMPLE LANGUAGE DETECT
-    // ==========================
     function detectLanguage(text){
-        const indonesianWords = [
-            "saya","nama","kamu","dia","makan","minum",
-            "rumah","sekolah","belajar","halo"
-        ];
-
+        const indonesianWords = ["saya","nama","kamu","dia","makan","minum","halo","ini"];
         const lower = text.toLowerCase();
-
-        for(let word of indonesianWords){
-            if(lower.includes(word)){
-                return "id";
-            }
-        }
-        return "en";
+        return indonesianWords.some(word => lower.includes(word)) ? "id" : "en";
     }
 
     // ==========================
-    // LOAD VOICES
+    // SPEECH ENGINES
     // ==========================
-    window.speechSynthesis.onvoiceschanged = () => {
-
+    const loadVoices = () => {
         voices = window.speechSynthesis.getVoices();
         if(!voiceSelect) return;
-
-        voiceSelect.innerHTML = "";
-
-        voices.forEach((voice, i) => {
-            const option = new Option(`${voice.name} (${voice.lang})`, i);
-            voiceSelect.appendChild(option);
-        });
-
-        if (voices.length > 0) {
-            speech.voice = voices[0];
-        }
+        voiceSelect.innerHTML = voices
+            .map((voice, i) => `<option value="${i}">${voice.name} (${voice.lang})</option>`)
+            .join("");
+        if (voices.length > 0) speech.voice = voices[0];
     };
+
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
 
     voiceSelect?.addEventListener("change", () => {
         speech.voice = voices[voiceSelect.value];
     });
 
-    // ==========================
-    // PLAY AUDIO
-    // ==========================
     listenBtn?.addEventListener("click", () => {
-
-        if(!textarea) return;
-
-        const text = textarea.value.trim();
+        const text = textarea?.value.trim();
         if (!text) return;
-
         window.speechSynthesis.cancel();
         speech.text = text;
         window.speechSynthesis.speak(speech);
     });
 
     // ==========================
-    // TRANSLATE FEATURE
+    // TRANSLATE (Fixed Global Variable)
     // ==========================
     translateBtn?.addEventListener("click", async () => {
-
         if(!textarea || !translationResult) return;
-
         const text = textarea.value.trim();
+        if (!text) return alert("Please write text first!");
 
-        if (!text) {
-            alert("Please write text first!");
-            return;
-        }
+        translationResult.innerHTML = "⌛ Translating...";
 
-        translationResult.innerHTML = "Translating...";
+        let from = fromLangSelect.value;
+        let to = toLangSelect.value;
 
-        let fromLang = fromLangSelect.value;
-        let toLang = toLangSelect.value;
-
-        if(fromLang === "auto"){
-            fromLang = detectLanguage(text);
-            detectedLang = fromLang;
-        }
-
-        if(fromLang === toLang){
-            toLang = (fromLang === "en") ? "id" : "en";
-        }
+        if(from === "auto") from = detectLanguage(text);
+        if(from === to) to = (from === "en") ? "id" : "en";
 
         try {
-            const response = await fetch(
-                "https://api.mymemory.translated.net/get?q=" +
-                encodeURIComponent(text) +
-                "&langpair=" + fromLang + "|" + toLang
-            );
-
-            const data = await response.json();
-
+            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`);
+            const data = await res.json();
+            
+            // Simpan ke variabel global agar drawPoster bisa baca
             translatedText = data?.responseData?.translatedText || "Translation not available";
 
             translationResult.innerHTML = `
-            🌍 Detected: <b>${fromLang.toUpperCase()}</b><br>
-            🌍 Translation: <b>${translatedText}</b>
+                🌍 Detected: <b>${from.toUpperCase()}</b><br>
+                🌍 Translation: <b>${translatedText}</b>
             `;
-
         } catch (error) {
             translationResult.innerHTML = "❌ Translation failed";
+            console.error(error);
         }
     });
 
     // ==========================
-    // AUTO GRAMMAR CHECK
+    // GRAMMAR AI (More Robust)
     // ==========================
     textarea?.addEventListener("input", () => {
-
         clearTimeout(typingTimer);
-
         typingTimer = setTimeout(() => {
             checkGrammarPreview(textarea.value);
         }, delay);
-
     });
 
     async function checkGrammarPreview(text) {
-
-        if (!text.trim() || !previewBox || !loading) return;
+        if (!text.trim() || !previewBox || !loading) {
+            if(previewBox) previewBox.style.display = "none";
+            return;
+        }
 
         if (controller) controller.abort();
         controller = new AbortController();
-
         loading.style.display = "block";
 
         try {
-
             const response = await fetch("/api/grammar", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text }),
                 signal: controller.signal
             });
+
+            if (!response.ok) throw new Error("API Server Error");
 
             const data = await response.json();
             const correctedText = data.corrected;
 
             loading.style.display = "none";
 
-            if (!correctedText || correctedText === text) {
+            if (!correctedText || correctedText.toLowerCase() === text.toLowerCase().trim()) {
                 previewBox.style.display = "none";
                 return;
             }
 
             previewBox.style.display = "block";
-
-            previewBox.innerHTML = `
-            ✨ AI Correction:
-            <span style="color:#00ffd5;font-weight:bold;">
-            ${correctedText}
-            </span>
-            `;
+            previewBox.innerHTML = `✨ AI Correction: <span style="color:#00ffd5;font-weight:bold;cursor:pointer;">${correctedText}</span>`;
 
             previewBox.onclick = () => {
                 textarea.value = correctedText;
                 previewBox.style.display = "none";
+                // Trigger translate ulang otomatis setelah koreksi
+                translateBtn.click();
             };
 
         } catch (error) {
-            loading.style.display = "none";
-            previewBox.style.display = "none";
-            console.error("Grammar error:", error);
+            if (error.name !== 'AbortError') {
+                console.error("Grammar error:", error);
+                loading.style.display = "none";
+                previewBox.style.display = "none";
+            }
         }
     }
 
     // ==========================
-    // DRAW POSTER
+    // POSTER ENGINE
     // ==========================
-    function drawPoster(text) {
+    async function drawPoster(text) {
+        if(!canvas) return;
+        const ctx = canvas.getContext("2d");
+        canvas.width = 800;
+        canvas.height = 1000;
+
+        const img = new Image();
+        img.src = themeBackgrounds[posterTheme?.value] || themeBackgrounds.sunset;
 
         return new Promise((resolve) => {
-
-            if(!canvas) return;
-
-            const ctx = canvas.getContext("2d");
-
-            canvas.width = 800;
-            canvas.height = 1000;
-
-            const img = new Image();
-
-            img.onerror = () => {
-                alert("❌ Gambar background tidak ditemukan!");
-            };
-
             img.onload = () => {
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillStyle = "rgba(0,0,0,0.6)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.textAlign = "center";
-
                 ctx.fillStyle = "white";
                 ctx.font = "bold 42px Arial";
-                ctx.fillText("English Learning Mode", canvas.width / 2, 80);
+                ctx.fillText("English Learning Mode", canvas.width / 2, 100);
 
-                ctx.fillStyle = "#cccccc";
-                ctx.font = "bold 24px Arial";
-                ctx.fillText("Original", canvas.width / 2, 160);
-
+                // Original Text
+                ctx.fillStyle = "#00ffd5";
+                ctx.font = "bold 28px Arial";
+                ctx.fillText("Original Text", canvas.width / 2, 200);
                 ctx.fillStyle = "white";
-                ctx.font = "28px Arial";
+                ctx.font = "32px Arial";
+                wrapText(ctx, text, canvas.width / 2, 260, 700, 45);
 
-                wrapText(ctx, text, canvas.width / 2, 200, 700, 40);
-
+                // Translated Text
                 if (translatedText) {
-                    ctx.fillStyle = "#cccccc";
-                    ctx.font = "bold 24px Arial";
-                    ctx.fillText("Translation / Terjemahan", canvas.width / 2, 450);
-
-                    ctx.fillStyle = "#E0E0E0";
-                    ctx.font = "28px Arial";
-
-                    wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
+                    ctx.fillStyle = "#ff0055";
+                    ctx.font = "bold 28px Arial";
+                    ctx.fillText("Translation", canvas.width / 2, 550);
+                    ctx.fillStyle = "white";
+                    ctx.font = "32px Arial";
+                    wrapText(ctx, translatedText, canvas.width / 2, 610, 700, 45);
                 }
 
                 resolve();
             };
-
-            img.src = themeBackgrounds[posterTheme?.value];
         });
     }
 
-    // ==========================
-    // TEXT WRAP
-    // ==========================
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-
         const words = text.split(" ");
         let line = "";
-
         for (let n = 0; n < words.length; n++) {
-
             const testLine = line + words[n] + " ";
-            const testWidth = ctx.measureText(testLine).width;
-
-            if (testWidth > maxWidth && n > 0) {
+            if (ctx.measureText(testLine).width > maxWidth && n > 0) {
                 ctx.fillText(line, x, y);
                 line = words[n] + " ";
                 y += lineHeight;
@@ -314,29 +239,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 line = testLine;
             }
         }
-
         ctx.fillText(line, x, y);
     }
 
-    // ==========================
-    // GENERATE POSTER
-    // ==========================
     window.generatePoster = async function () {
-
-        if(!textarea || !canvas) return;
-
-        const text = textarea.value.trim();
-
-        if (!text)
-            return alert("Please write text first!");
+        const text = textarea?.value.trim();
+        if (!text) return alert("Please write text first!");
+        
+        // Pastikan terjemahan ada sebelum gambar dibuat
+        if(!translatedText) {
+            await translateBtn.click();
+        }
 
         canvas.style.display = "block";
-
         await drawPoster(text);
-
-        window.speechSynthesis.cancel();
-        speech.text = text;
-        window.speechSynthesis.speak(speech);
+        
+        // Auto Speak
+        listenBtn.click();
     };
-
 });
