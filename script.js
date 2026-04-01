@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     // ==========================
-    // 1. INITIALIZATION
+    // INIT
     // ==========================
     const speech = new SpeechSynthesisUtterance();
     let voices = [];
@@ -11,19 +11,41 @@ document.addEventListener("DOMContentLoaded", () => {
     const previewBox = document.getElementById("correctionPreview");
     const listenBtn = document.getElementById("listenBtn");
     const canvas = document.getElementById("posterCanvas");
+
     const translateBtn = document.getElementById("translateBtn");
     const translationResult = document.getElementById("translationResult");
+
     const fromLangSelect = document.getElementById("fromLang");
     const toLangSelect = document.getElementById("toLang");
     const swapBtn = document.getElementById("swapLang");
+
     const posterTheme = document.getElementById("posterTheme");
     const loading = document.getElementById("loading");
 
-    let translatedText = ""; 
+    let translatedText = "";
+    let detectedLang = "";
+
     let typingTimer;
     const delay = 800;
     let controller;
 
+    // ==========================
+    // SAFETY CHECK (ANTI ERROR)
+    // ==========================
+    function safe(el, name){
+        if(!el){
+            console.error(`❌ Element #${name} tidak ditemukan`);
+        }
+        return el;
+    }
+
+    safe(voiceSelect,"voiceSelect");
+    safe(textarea,"inputText");
+    safe(listenBtn,"listenBtn");
+
+    // ==========================
+    // BACKGROUND THEMES
+    // ==========================
     const themeBackgrounds = {
         sunset: "images/jayandaru.png",
         ocean: "images/candi_sumur.png",
@@ -32,191 +54,269 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ==========================
-    // 2. LANGUAGE LOGIC
+    // LANGUAGE SWAP
     // ==========================
     swapBtn?.addEventListener("click", () => {
-        const temp = fromLangSelect.value;
-        fromLangSelect.value = toLangSelect.value;
-        toLangSelect.value = temp;
+        [fromLangSelect.value, toLangSelect.value] =
+        [toLangSelect.value, fromLangSelect.value];
     });
 
-    function detectLanguage(text) {
-        const indonesianWords = ["saya","nama","kamu","dia","makan","minum","halo","ini","adalah","di"];
+    // ==========================
+    // SIMPLE LANGUAGE DETECT
+    // ==========================
+    function detectLanguage(text){
+        const indonesianWords = [
+            "saya","nama","kamu","dia","makan","minum",
+            "rumah","sekolah","belajar","halo"
+        ];
+
         const lower = text.toLowerCase();
-        return indonesianWords.some(word => lower.includes(word)) ? "id" : "en";
+
+        for(let word of indonesianWords){
+            if(lower.includes(word)){
+                return "id";
+            }
+        }
+        return "en";
     }
 
     // ==========================
-    // 3. SPEECH ENGINE
+    // LOAD VOICES
     // ==========================
-    const loadVoices = () => {
+    window.speechSynthesis.onvoiceschanged = () => {
         voices = window.speechSynthesis.getVoices();
         if(!voiceSelect) return;
-        voiceSelect.innerHTML = voices
-            .map((voice, i) => `<option value="${i}">${voice.name} (${voice.lang})</option>`)
-            .join("");
-        if (voices.length > 0) speech.voice = voices[0];
-    };
 
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
+        voiceSelect.innerHTML = "";
+
+        voices.forEach((voice, i) => {
+            const option = new Option(`${voice.name} (${voice.lang})`, i);
+            voiceSelect.appendChild(option);
+        });
+
+        if (voices.length > 0) {
+            speech.voice = voices[0];
+        }
+    };
 
     voiceSelect?.addEventListener("change", () => {
         speech.voice = voices[voiceSelect.value];
     });
 
+    // ==========================
+    // PLAY AUDIO
+    // ==========================
     listenBtn?.addEventListener("click", () => {
-        const text = textarea?.value.trim();
+        if(!textarea) return;
+
+        const text = textarea.value.trim();
         if (!text) return;
+
         window.speechSynthesis.cancel();
         speech.text = text;
         window.speechSynthesis.speak(speech);
     });
 
     // ==========================
-    // 4. TRANSLATE ENGINE
+    // TRANSLATE FEATURE
     // ==========================
     translateBtn?.addEventListener("click", async () => {
         if(!textarea || !translationResult) return;
+
         const text = textarea.value.trim();
-        if (!text) return;
 
-        translationResult.innerHTML = "⌛ Translating...";
+        if (!text) {
+            alert("Please write text first!");
+            return;
+        }
 
-        let from = fromLangSelect.value;
-        let to = toLangSelect.value;
+        translationResult.innerHTML = "Translating...";
 
-        if(from === "auto") from = detectLanguage(text);
-        if(from === to) to = (from === "en") ? "id" : "en";
+        let fromLang = fromLangSelect.value;
+        let toLang = toLangSelect.value;
+
+        if(fromLang === "auto"){
+            fromLang = detectLanguage(text);
+            detectedLang = fromLang;
+        }
+
+        if(fromLang === toLang){
+            toLang = (fromLang === "en") ? "id" : "en";
+        }
 
         try {
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`);
-            const data = await res.json();
-            
-            translatedText = data?.responseData?.translatedText || "Translation error";
+            const response = await fetch(
+                "https://api.mymemory.translated.net/get?q=" +
+                encodeURIComponent(text) +
+                "&langpair=" + fromLang + "|" + toLang
+            );
+
+            const data = await response.json();
+
+            translatedText = data?.responseData?.translatedText || "Translation not available";
 
             translationResult.innerHTML = `
-                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px;">
-                    <small>Detected: ${from.toUpperCase()}</small><br>
-                    <strong>${translatedText}</strong>
-                </div>
+            🌍 Detected: <b>${fromLang.toUpperCase()}</b><br>
+            🌍 Translation: <b>${translatedText}</b>
             `;
+
         } catch (error) {
             translationResult.innerHTML = "❌ Translation failed";
         }
     });
 
     // ==========================
-    // 5. GRAMMAR AI (FIXED PATH & VARIABLE)
+    // AUTO GRAMMAR CHECK (LanguageTool API)
     // ==========================
     textarea?.addEventListener("input", () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
-            checkGrammarPreview(textarea.value);
+            checkGrammarLT(textarea.value);
         }, delay);
     });
 
-    async function checkGrammarPreview(text) {
-        if (!text.trim() || text.length < 5) {
+    async function checkGrammarLT(text) {
+        if (!text.trim() || !previewBox || !loading) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
         if (controller) controller.abort();
         controller = new AbortController();
-        if(loading) loading.style.display = "block";
+
+        loading.style.display = "block";
 
         try {
-            // PERBAIKAN: Menggunakan path relatif 'api/grammar' agar lebih aman di Vercel
-            const response = await fetch('api/grammar', {
+            const response = await fetch("https://api.languagetool.org/v2/check", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text }),
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                    text: text,
+                    language: "en-US",
+                }),
                 signal: controller.signal
             });
 
-            if (!response.ok) throw new Error("API Server Error");
-
             const data = await response.json();
-            // PERBAIKAN: Nama properti harus 'correction' sesuai file grammar.js
-            const correctedText = data.correction;
+            loading.style.display = "none";
 
-            if(loading) loading.style.display = "none";
+            if (data.matches && data.matches.length > 0) {
+                let correctedText = text;
+                
+                // Urutkan dari belakang agar index substring tidak bergeser
+                const matches = [...data.matches].reverse();
+                
+                matches.forEach(match => {
+                    if (match.replacements && match.replacements.length > 0) {
+                        const start = match.offset;
+                        const end = match.offset + match.length;
+                        const replacement = match.replacements[0].value;
+                        correctedText = correctedText.substring(0, start) + replacement + correctedText.substring(end);
+                    }
+                });
 
-            if (!correctedText || correctedText.toLowerCase().trim() === text.toLowerCase().trim()) {
+                if (correctedText === text) {
+                    previewBox.style.display = "none";
+                    return;
+                }
+
+                previewBox.style.display = "block";
+                previewBox.innerHTML = `
+                    ✨ AI Correction:
+                    <span style="color:#00ffd5;font-weight:bold;cursor:pointer;">
+                    ${correctedText}
+                    </span>
+                    <br><small style="font-size:10px; color:#ccc;">Klik untuk terapkan</small>
+                `;
+
+                previewBox.onclick = () => {
+                    textarea.value = correctedText;
+                    previewBox.style.display = "none";
+                    if(canvas.style.display === "block") drawPoster(correctedText);
+                };
+            } else {
                 previewBox.style.display = "none";
-                return;
             }
-
-            previewBox.style.display = "block";
-            previewBox.innerHTML = `✨ AI Correction: <span style="color:#00ffd5;font-weight:bold;cursor:pointer;text-decoration:underline;">${correctedText}</span>`;
-
-            previewBox.onclick = () => {
-                textarea.value = correctedText;
-                previewBox.style.display = "none";
-                translateBtn.click(); // Langsung translate ulang setelah dikoreksi
-            };
 
         } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error("Grammar error:", error);
-                if(loading) loading.style.display = "none";
-            }
+            if (error.name === 'AbortError') return;
+            loading.style.display = "none";
+            previewBox.style.display = "none";
+            console.error("Grammar error:", error);
         }
     }
 
     // ==========================
-    // 6. POSTER ENGINE
+    // DRAW POSTER
     // ==========================
-    async function drawPoster(text) {
-        if(!canvas) return;
-        const ctx = canvas.getContext("2d");
-        
-        const img = new Image();
-        img.src = themeBackgrounds[posterTheme?.value] || themeBackgrounds.sunset;
-
+    function drawPoster(text) {
         return new Promise((resolve) => {
+            if(!canvas) return;
+
+            const ctx = canvas.getContext("2d");
+            canvas.width = 800;
+            canvas.height = 1000;
+
+            const img = new Image();
+
+            img.onerror = () => {
+                alert("❌ Gambar background tidak ditemukan!");
+            };
+
             img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                // Overlay Gelap
-                ctx.fillStyle = "rgba(0,0,0,0.6)";
+
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.textAlign = "center";
-                ctx.fillStyle = "white";
-                ctx.font = "bold 40px Arial";
-                ctx.fillText("English Learning Card", canvas.width / 2, 100);
 
-                // Original Text
-                ctx.fillStyle = "#00ffd5";
-                ctx.font = "bold 28px Arial";
-                ctx.fillText("Original Text", canvas.width / 2, 220);
                 ctx.fillStyle = "white";
-                ctx.font = "32px Arial";
-                wrapText(ctx, text, canvas.width / 2, 280, 700, 45);
+                ctx.font = "bold 42px Arial";
+                ctx.fillText("English Learning Mode", canvas.width / 2, 80);
 
-                // Translated Text
+                ctx.fillStyle = "#cccccc";
+                ctx.font = "bold 24px Arial";
+                ctx.fillText("Original", canvas.width / 2, 160);
+
+                ctx.fillStyle = "white";
+                ctx.font = "28px Arial";
+
+                wrapText(ctx, text, canvas.width / 2, 200, 700, 40);
+
                 if (translatedText) {
-                    ctx.fillStyle = "#ff0055";
-                    ctx.font = "bold 28px Arial";
-                    ctx.fillText("Translation", canvas.width / 2, 550);
-                    ctx.fillStyle = "white";
-                    ctx.font = "32px Arial";
-                    wrapText(ctx, translatedText, canvas.width / 2, 610, 700, 45);
+                    ctx.fillStyle = "#cccccc";
+                    ctx.font = "bold 24px Arial";
+                    ctx.fillText("Translation / Terjemahan", canvas.width / 2, 450);
+
+                    ctx.fillStyle = "#E0E0E0";
+                    ctx.font = "28px Arial";
+
+                    wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
                 }
 
                 resolve();
             };
+
+            img.src = themeBackgrounds[posterTheme?.value];
         });
     }
 
+    // ==========================
+    // TEXT WRAP
+    // ==========================
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(" ");
         let line = "";
+
         for (let n = 0; n < words.length; n++) {
             const testLine = line + words[n] + " ";
-            if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+            const testWidth = ctx.measureText(testLine).width;
+
+            if (testWidth > maxWidth && n > 0) {
                 ctx.fillText(line, x, y);
                 line = words[n] + " ";
                 y += lineHeight;
@@ -227,22 +327,24 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillText(line, x, y);
     }
 
+    // ==========================
+    // GENERATE POSTER
+    // ==========================
     window.generatePoster = async function () {
-        const text = textarea?.value.trim();
-        if (!text) return alert("Write something first!");
-        
-        if(!translatedText) {
-            await translateBtn.click();
-            // Beri jeda sebentar agar fetch selesai
-            setTimeout(async () => {
-                canvas.style.display = "block";
-                await drawPoster(text);
-                listenBtn.click();
-            }, 1000);
-        } else {
-            canvas.style.display = "block";
-            await drawPoster(text);
-            listenBtn.click();
-        }
+        if(!textarea || !canvas) return;
+
+        const text = textarea.value.trim();
+
+        if (!text)
+            return alert("Please write text first!");
+
+        canvas.style.display = "block";
+
+        await drawPoster(text);
+
+        window.speechSynthesis.cancel();
+        speech.text = text;
+        window.speechSynthesis.speak(speech);
     };
+
 });
