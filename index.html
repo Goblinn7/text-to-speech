@@ -1,83 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Text To Speech Converter</title>
-
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text To Speech Converter</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div class="hero">
+    <div class="hero">
 
-<h1>Text To Speech <span>Converter</span></h1>
+        <h1>Text To Speech <span>Converter</span></h1>
 
-<!-- LANGUAGE SWITCH -->
-<div class="language-bar">
+        <div class="language-bar">
+            <select id="fromLang">
+                <option value="auto">Auto Detect</option>
+                <option value="id">Indonesian</option>
+                <option value="en">English</option>
+            </select>
 
-<select id="fromLang">
-<option value="auto">Auto Detect</option>
-<option value="id">Indonesian</option>
-<option value="en">English</option>
-</select>
+            <button type="button" id="swapLang">⇄</button>
 
-<button type="button" id="swapLang">⇄</button>
+            <select id="toLang">
+                <option value="en">English</option>
+                <option value="id">Indonesian</option>
+            </select>
+        </div>
 
-<select id="toLang">
-<option value="en">English</option>
-<option value="id">Indonesian</option>
-</select>
+        <textarea id="inputText" placeholder="Write anything here..."></textarea>
 
-</div>
+        <div id="correctionPreview" class="correction-box"></div>
 
-<!-- TEXT INPUT -->
-<textarea id="inputText" placeholder="Write anything here..."></textarea>
+        <div id="loading" style="display:none; margin-top:10px;">
+            Processing...
+        </div>
 
-<!-- AI Correction -->
-<div id="correctionPreview" class="correction-box"></div>
+        <div class="row">
+            <select id="voiceSelect"></select>
+            <button type="button" id="listenBtn">Listen</button>
+            <button type="button" id="translateBtn">Translate</button>
 
-<!-- LOADING -->
-<div id="loading" style="display:none; margin-top:10px;">
-Processing...
-</div>
+            <select id="posterTheme">
+                <option value="sunset">Monumen Jayandaru</option>
+                <option value="ocean">Candi Sumur</option>
+                <option value="dark">Candi Dermo</option>
+                <option value="nature">Candi Pari</option>
+            </select>
 
-<!-- CONTROL AREA -->
-<div class="row">
+            <button type="button" onclick="generatePoster()">
+                Generate Poster
+            </button>
+        </div>
 
-<select id="voiceSelect"></select>
+        <div id="translationResult"></div>
 
-<button type="button" id="listenBtn">Listen</button>
-<button type="button" id="translateBtn">Translate</button>
+        <div class="poster-container" style="text-align: center; width: 100%; max-width: 700px;">
+            <canvas id="posterCanvas" 
+                width="1000" 
+                height="800" 
+                style="margin-top:30px; width:100%; border-radius:15px; display: none;">
+            </canvas>
 
-<select id="posterTheme">
-<option value="sunset">Monumen Jayandaru</option>
-<option value="ocean">Candi Sumur</option>
-<option value="dark">Candi Dermo</option>
-<option value="nature">Candi Pari</option>
-</select>
+            <button type="button" id="downloadBtn" 
+                style="display:none; margin: 20px auto; background: #ffc107; color: #000; font-weight: bold; padding: 12px 30px; border-radius: 35px; border: none; cursor: pointer; font-size: 16px;" 
+                onclick="downloadPoster()">
+                ⬇️ Download Poster (PNG)
+            </button>
+        </div>
 
-<button type="button" onclick="generatePoster()">
-Generate Poster
-</button>
+    </div>
 
-</div>
+    <script src="script.js" defer></script>
 
-<!-- TRANSLATION RESULT -->
-<div id="translationResult"></div>
+    <script>
+        function downloadPoster() {
+            const canvas = document.getElementById('posterCanvas');
+            // Membuat link download temporary
+            const link = document.createElement('a');
+            link.download = 'Poster-Sidoarjo-TTS.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
 
-<!-- POSTER -->
-<canvas id="posterCanvas"
-width="1000"
-height="800"
-style="margin-top:30px; max-width:700px; width:100%; border-radius:15px;">
-</canvas>
-
-</div>
-
-<script src="script.js" defer></script>
+        // Fungsi pembantu agar tombol muncul saat Generate Poster diklik
+        const originalGenerate = window.generatePoster;
+        window.generatePoster = async function() {
+            // Panggil fungsi asli dari script.js
+            const textarea = document.getElementById("inputText");
+            if(textarea.value.trim() !== "") {
+                const canvas = document.getElementById('posterCanvas');
+                const btn = document.getElementById('downloadBtn');
+                
+                // Tunggu proses draw di script.js
+                // Kita panggil manual di sini agar sinkron tampilannya
+                if(typeof originalGenerate === 'function') {
+                    await originalGenerate();
+                    canvas.style.display = "block";
+                    btn.style.display = "inline-block";
+                }
+            } else {
+                alert("Please write text first!");
+            }
+        };
+    </script>
 
 </body>
 </html>
