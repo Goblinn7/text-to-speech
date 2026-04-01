@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const previewBox = document.getElementById("correctionPreview");
     const listenBtn = document.getElementById("listenBtn");
     const canvas = document.getElementById("posterCanvas");
+    const downloadBtn = document.getElementById("downloadBtn"); // Tambahan untuk Download
 
     const translateBtn = document.getElementById("translateBtn");
     const translationResult = document.getElementById("translationResult");
@@ -42,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     safe(voiceSelect,"voiceSelect");
     safe(textarea,"inputText");
     safe(listenBtn,"listenBtn");
+    safe(downloadBtn,"downloadBtn"); // Safety check untuk tombol download
 
     // ==========================
     // BACKGROUND THEMES
@@ -146,10 +148,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const response = await fetch(
-                "https://api.mymemory.translated.net/get?q=" +
-                encodeURIComponent(text) +
-                "&langpair=" + fromLang + "|" + toLang
-            );
+    "https://api.mymemory.translated.net/get?q=" +
+    encodeURIComponent(text) +
+    "&langpair=" + fromLang + "|" + toLang
+);
 
             const data = await response.json();
 
@@ -205,7 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.matches && data.matches.length > 0) {
                 let correctedText = text;
                 
-                // Urutkan dari belakang agar index substring tidak bergeser
                 const matches = [...data.matches].reverse();
                 
                 matches.forEach(match => {
@@ -342,9 +343,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         await drawPoster(text);
 
+        // MUNCULKAN TOMBOL DOWNLOAD SETELAH DRAW SELESAI
+        if(downloadBtn) {
+            downloadBtn.style.display = "inline-block";
+        }
+
         window.speechSynthesis.cancel();
         speech.text = text;
         window.speechSynthesis.speak(speech);
+    };
+
+    // ==========================
+    // DOWNLOAD POSTER FUNCTION
+    // ==========================
+    window.downloadPoster = function() {
+        if(!canvas) return;
+        const link = document.createElement('a');
+        link.download = 'Poster-Sidoarjo-TTS.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     };
 
 });
