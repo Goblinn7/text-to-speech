@@ -245,23 +245,26 @@ button:hover {
 
 /* RESPONSIVE BREAKPOINTS */
 @media (max-width: 768px) {
-    .hero { padding-top: 100px; }
+    .hero { padding-top: 120px; } /* Tambah space atas agar h1 turun */
     .hero h1 { font-size: 32px; }
     textarea { height: 180px; }
 }
 
 @media (max-width: 480px) {
+    .hero { padding-top: 140px; } /* Khusus Samsung A6+ biar judulnya lebih turun lagi */
     .hero h1 { font-size: 24px; margin-bottom: 20px; }
     
     /* Header Mobile */
+    .auth-btn, #userInfo { top: 15px; } /* Naikkan sedikit posisi tombol auth agar tidak kena status bar */
     .auth-btn button { padding: 6px 10px; font-size: 11px; }
     #userInfo { padding: 4px 10px; max-width: 140px; }
-    #userInfo b { display: none; } /* Sembunyikan label 'User:' di HP sempit */
+    #userInfo b { display: none; }
 
     /* Pengaturan Baris Tombol agar tetap Sejajar */
     .row { 
         flex-direction: row !important; 
         gap: 5px; 
+        flex-wrap: nowrap !important;
     }
     
     .row select {
