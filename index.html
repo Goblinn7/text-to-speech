@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Web App</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        body { position: relative; }
+
+        .auth-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .auth-btn button {
+            padding: 6px 12px;
+            margin-right: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+
+        #userInfo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+        }
+
+        #authModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            color: white;
+        }
+
+        .modal-box input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+        }
+
+        .modal-box button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .section { margin-top: 40px; }
+
+        .history-item {
+            background: #2c2c2c;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- AUTH BUTTON -->
+<div class="auth-btn">
+    <button onclick="openAuth('login')">Login</button>
+    <button onclick="openAuth('register')">Register</button>
+</div>
+
+<div id="userInfo">Belum login</div>
+
+<!-- AUTH MODAL -->
+<div id="authModal">
+    <div class="modal-box">
+        <h2 id="authTitle">Login</h2>
+
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+
+        <button onclick="handleAuth()">Submit</button>
+        <button onclick="closeAuth()" style="background:red;color:white;">Close</button>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="hero">
+
+    <h1>Text To Speech <span>Converter</span></h1>
+
+    <div class="language-bar">
+        <select id="fromLang">
+            <option value="auto">Auto Detect</option>
+            <option value="id">Indonesian</option>
+            <option value="en">English</option>
+        </select>
+
+        <button type="button" id="swapLang">⇄</button>
+
+        <select id="toLang">
+            <option value="en">English</option>
+            <option value="id">Indonesian</option>
+        </select>
+    </div>
+
+    <textarea id="inputText" placeholder="Write anything here..."></textarea>
+
+    <div id="correctionPreview" class="correction-box"></div>
+
+    <div id="loading" style="display:none;">Processing...</div>
+
+    <div class="row">
+        <select id="voiceSelect"></select>
+        <button type="button" id="listenBtn">Listen</button>
+        <button type="button" id="translateBtn">Translate</button>
+
+        <select id="posterTheme">
+            <option value="sunset">Monumen Jayandaru</option>
+            <option value="ocean">Candi Sumur</option>
+            <option value="dark">Candi Dermo</option>
+            <option value="nature">Candi Pari</option>
+        </select>
+
+        <button onclick="generatePoster()">Generate Poster</button>
+    </div>
+
+    <div id="translationResult"></div>
+
+    <!-- POSTER -->
+    <div class="poster-container" style="text-align:center; max-width:700px;">
+        <canvas id="posterCanvas" width="1000" height="800" style="display:none;"></canvas>
+
+        <button id="downloadBtn" style="display:none;">
+            ⬇️ Download Poster
+        </button>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="section">
+        <h2>📜 History</h2>
+        <div id="historyContainer"></div>
+        <button onclick="clearHistory()">Clear All</button>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="section">
+        <div id="adminContainer"></div>
+    </div>
+
+</div>
+
+<!-- SCRIPT -->
+<script src="script.js" defer></script>
+<script src="user/history.js" defer></script>
+<script src="admin/admin.js" defer></script>
+
+<script>
+let isLogin = true;
+
+// ================= MODAL =================
+function openAuth(mode) {
+    isLogin = (mode === "login");
+    document.getElementById("authTitle").innerText = isLogin ? "Login" : "Register";
+    document.getElementById("authModal").style.display = "flex";
+}
+
+function closeAuth() {
+    document.getElementById("authModal").style.display = "none";
+}
+
+// ================= AUTH (UPDATED API) =================
+async function handleAuth() {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+
+    if (!user || !pass) {
+        alert("Isi semua field!");
+        return;
+    }
+
+    const endpoint = isLogin ? "/api/login" : "/api/register";
+
+    try {
+        const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem("currentUser", data.username);
+            localStorage.setItem("role", data.role); // 🔥 penting
+
+            updateUserUI();
+            closeAuth();
+            alert(data.message);
+        } else {
+            alert(data.message);
+        }
+
+    } catch (err) {
+        alert("Server error!");
+    }
+}
+
+// ================= USER UI =================
+function updateUserUI() {
+    const user = localStorage.getItem("currentUser");
+    const role = localStorage.getItem("role");
+    const userInfo = document.getElementById("userInfo");
+
+    if (user) {
+        userInfo.innerHTML = `
+            👤 ${user} (${role})
+            <button onclick="logout()">Logout</button>
+        `;
+    } else {
+        userInfo.innerHTML = "Belum login";
+    }
+}
+
+function logout() {
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("role");
+    updateUserUI();
+}
+
+// ================= INIT =================
+window.onload = () => {
+    updateUserUI();
+};
+</script>
+
+</body>
+</html>
