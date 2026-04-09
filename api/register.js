@@ -14,7 +14,7 @@ let db;
 async function connectDB() {
     if (!db) {
         await client.connect();
-        db = client.db("tts_app");
+        db = client.db("tts_web");
     }
     return db;
 }
