@@ -30,9 +30,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start; /* Ubah ke start agar tidak terlalu ke bawah di HP */
     color: #fff;
-    padding: 40px 20px;
+    padding: 80px 20px 40px 20px; /* Tambah padding atas untuk space tombol */
 }
 
 /* TITLE */
@@ -42,23 +42,28 @@ body {
     margin-bottom: 35px;
     text-align: center;
     line-height: 1.3;
+    width: 100%;
+    max-width: 800px;
 }
 
 .hero h1 span {
     color: var(--primary-color);
 }
 
-/* AUTH BUTTONS (Top Left) */
-.auth-btn {
+/* AUTH & USER BAR (HEADER FIX) */
+/* Kita buat barisan atas agar tidak menumpuk judul */
+.auth-btn, #userInfo {
     position: absolute;
     top: 20px;
-    left: 20px;
     z-index: 10;
 }
 
+.auth-btn { left: 20px; }
+#userInfo { right: 20px; }
+
 .auth-btn button {
     padding: 8px 16px;
-    margin-right: 8px;
+    margin-right: 5px;
     cursor: pointer;
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.3);
@@ -66,35 +71,29 @@ body {
     color: white;
     backdrop-filter: blur(5px);
     transition: 0.3s;
+    font-size: 14px;
 }
 
-.auth-btn button:hover {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-/* USER INFO (Top Right) */
 #userInfo {
-    position: absolute;
-    top: 20px;
-    right: 20px;
     color: white;
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(0,0,0,0.2);
-    padding: 5px 15px;
+    background: rgba(0,0,0,0.3);
+    padding: 6px 15px;
     border-radius: 30px;
+    backdrop-filter: blur(5px);
 }
 
 #userInfo button {
-    background: none;
-    border: 1px solid #fff;
+    background: var(--primary-color);
+    border: none;
     color: white;
-    padding: 2px 10px;
+    padding: 4px 12px;
     border-radius: 15px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: bold;
 }
 
 /* LANGUAGE BAR */
@@ -112,10 +111,11 @@ body {
     border-radius: 8px;
     border: none;
     background: white;
+    font-size: 14px;
 }
 
 #swapLang {
-    padding: 8px 12px;
+    padding: 8px 15px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
@@ -129,20 +129,16 @@ textarea {
     width: 100%;
     max-width: 700px;
     height: 250px;
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.12);
     backdrop-filter: blur(10px);
     color: #fff;
     font-size: 16px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
     outline: none;
     padding: 20px;
     border-radius: 15px;
     resize: none;
-    margin-bottom: 20px;
-}
-
-textarea::placeholder {
-    color: #ddd;
+    margin-bottom: 15px;
 }
 
 /* CONTROL AREA & BUTTONS */
@@ -150,51 +146,65 @@ textarea::placeholder {
     width: 100%;
     max-width: 700px;
     display: flex;
+    flex-direction: row; /* Default row */
     justify-content: center;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
+    margin-bottom: 10px;
 }
 
 .row select {
-    flex: 1 1 200px;
-    height: 50px;
-    padding: 0 20px;
+    flex: 2 1 200px; /* Voice selection lebih lebar */
+    height: 48px;
+    padding: 0 15px;
     border: none;
-    border-radius: 35px;
+    border-radius: 12px;
     background: #403d84;
     color: #fff;
     outline: none;
+    font-size: 14px;
 }
 
-.row button, .section button:not(.btn-delete) {
-    flex: 1 1 130px;
+.row button, .section button:not(.btn-delete), .hero > button {
+    flex: 1 1 120px;
     background: var(--primary-color);
     color: #fff;
-    font-size: 15px;
-    padding: 12px 20px;
-    border-radius: 35px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 15px;
+    border-radius: 12px; /* Diubah dari 35px agar lebih modern & hemat tempat */
     border: none;
     cursor: pointer;
     transition: 0.3s ease;
 }
 
+/* Khusus button besar di bawah */
+#generatePosterBtn {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 10px;
+    border-radius: 12px;
+}
+
 button:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
 }
 
 /* HISTORY SECTION */
 .section {
-    margin-top: 50px;
+    margin-top: 40px;
     width: 100%;
     max-width: 700px;
+    background: rgba(0,0,0,0.1);
+    padding: 20px;
+    border-radius: 15px;
 }
 
 .section h2 {
     margin-bottom: 20px;
-    font-size: 24px;
+    font-size: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -202,52 +212,62 @@ button:hover {
 
 /* GAYA TOMBOL CLEAR ALL */
 .section button[onclick="clearHistory()"] {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.4);
-    font-size: 13px;
-    padding: 8px 18px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 12px;
+    padding: 6px 15px;
     border-radius: 20px;
-    color: #ddd;
-    flex: none; /* Biar ukurannya tidak melebar */
-}
-
-.section button[onclick="clearHistory()"]:hover {
-    background: rgba(255, 79, 122, 0.2);
-    border-color: var(--primary-color);
-    color: white;
+    color: #fff;
+    flex: none;
 }
 
 .history-item {
     background: var(--card-bg);
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    border: 1px solid rgba(255,255,255,0.05);
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column; /* Ubah ke column agar teks panjang tidak keluar jalur di HP */
+    gap: 5px;
 }
 
-/* MODAL STYLES */
-#authModal {
-    z-index: 100;
+/* RESPONSIVE BREAKPOINTS */
+@media (max-width: 768px) {
+    .hero { padding-top: 100px; } /* Beri ruang untuk header mobile */
+    .hero h1 { font-size: 32px; margin-bottom: 25px; }
+    
+    /* Pindahkan Auth & User ke satu baris di atas */
+    .auth-btn, #userInfo { 
+        position: absolute; 
+        top: 15px; 
+    }
+    .auth-btn { left: 10px; }
+    #userInfo { right: 10px; font-size: 12px; padding: 4px 10px; }
+    
+    textarea { height: 180px; font-size: 15px; }
 }
 
-.modal-box {
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
-}
+@media (max-width: 480px) {
+    .hero h1 { font-size: 26px; }
+    
+    /* Header Mobile agar tidak bertumpuk */
+    .auth-btn button { padding: 6px 10px; font-size: 12px; }
+    #userInfo { padding: 4px 8px; max-width: 150px; overflow: hidden; }
 
-/* RESPONSIVE */
-@media (max-width:900px) {
-    .hero h1 { font-size: 36px; }
-    textarea { height: 220px; }
-}
+    /* Susun tombol secara vertikal atau grid kecil */
+    .row { flex-direction: column; gap: 8px; }
+    .row select, .row button { 
+        width: 100% !important; 
+        flex: none; 
+        height: 45px;
+    }
+    
+    /* Perkecil Button agar tidak "makan tempat" */
+    .row button, #generatePosterBtn {
+        padding: 10px;
+        font-size: 13px;
+        border-radius: 10px;
+    }
 
-@media (max-width:600px) {
-    .hero h1 { font-size: 28px; }
-    .row { flex-direction: column; }
-    .row select, .row button { width: 100%; }
-    .auth-btn { position: relative; top: 0; left: 0; margin-bottom: 20px; }
-    #userInfo { position: relative; top: 0; right: 0; margin-bottom: 20px; }
+    .language-bar select { font-size: 12px; padding: 6px; }
 }
