@@ -30,9 +30,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start; /* Ubah ke start agar tidak terlalu ke bawah di HP */
+    justify-content: flex-start;
     color: #fff;
-    padding: 80px 20px 40px 20px; /* Tambah padding atas untuk space tombol */
+    padding: 80px 20px 40px 20px;
 }
 
 /* TITLE */
@@ -50,8 +50,7 @@ body {
     color: var(--primary-color);
 }
 
-/* AUTH & USER BAR (HEADER FIX) */
-/* Kita buat barisan atas agar tidak menumpuk judul */
+/* HEADER BUTTONS (FIXED TOP) */
 .auth-btn, #userInfo {
     position: absolute;
     top: 20px;
@@ -141,50 +140,64 @@ textarea {
     margin-bottom: 15px;
 }
 
-/* CONTROL AREA & BUTTONS */
+/* CONTROL AREA & BUTTONS (INLINE FIX) */
 .row {
     width: 100%;
     max-width: 700px;
     display: flex;
-    flex-direction: row; /* Default row */
+    flex-direction: row; /* Tetap sejajar */
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+    flex-wrap: nowrap; /* Mencegah tombol turun ke bawah */
     margin-bottom: 10px;
 }
 
 .row select {
-    flex: 2 1 200px; /* Voice selection lebih lebar */
+    flex: 2; /* Box suara lebih lebar */
     height: 48px;
-    padding: 0 15px;
+    padding: 0 10px;
     border: none;
     border-radius: 12px;
     background: #403d84;
     color: #fff;
     outline: none;
-    font-size: 14px;
+    font-size: 13px;
+    min-width: 0; /* Mencegah overflow */
 }
 
-.row button, .section button:not(.btn-delete), .hero > button {
-    flex: 1 1 120px;
+.row button {
+    flex: 1; /* Tombol Listen & Translate bagi rata */
     background: var(--primary-color);
     color: #fff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    padding: 12px 15px;
-    border-radius: 12px; /* Diubah dari 35px agar lebih modern & hemat tempat */
+    padding: 12px 5px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
+    white-space: nowrap; /* Teks tidak kepotong baris baru */
     transition: 0.3s ease;
 }
 
-/* Khusus button besar di bawah */
-#generatePosterBtn {
+/* POSTER SECTION */
+.poster-row {
     width: 100%;
     max-width: 700px;
-    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+#generatePosterBtn {
+    flex: 1;
+    background: var(--primary-color);
+    color: #fff;
+    font-size: 14px;
+    padding: 12px;
     border-radius: 12px;
+    border: none;
+    cursor: pointer;
 }
 
 button:hover {
@@ -210,7 +223,6 @@ button:hover {
     align-items: center;
 }
 
-/* GAYA TOMBOL CLEAR ALL */
 .section button[onclick="clearHistory()"] {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
@@ -227,47 +239,45 @@ button:hover {
     border-radius: 10px;
     margin-bottom: 10px;
     display: flex;
-    flex-direction: column; /* Ubah ke column agar teks panjang tidak keluar jalur di HP */
+    flex-direction: column;
     gap: 5px;
 }
 
 /* RESPONSIVE BREAKPOINTS */
 @media (max-width: 768px) {
-    .hero { padding-top: 100px; } /* Beri ruang untuk header mobile */
-    .hero h1 { font-size: 32px; margin-bottom: 25px; }
-    
-    /* Pindahkan Auth & User ke satu baris di atas */
-    .auth-btn, #userInfo { 
-        position: absolute; 
-        top: 15px; 
-    }
-    .auth-btn { left: 10px; }
-    #userInfo { right: 10px; font-size: 12px; padding: 4px 10px; }
-    
-    textarea { height: 180px; font-size: 15px; }
+    .hero { padding-top: 100px; }
+    .hero h1 { font-size: 32px; }
+    textarea { height: 180px; }
 }
 
 @media (max-width: 480px) {
-    .hero h1 { font-size: 26px; }
+    .hero h1 { font-size: 24px; margin-bottom: 20px; }
     
-    /* Header Mobile agar tidak bertumpuk */
-    .auth-btn button { padding: 6px 10px; font-size: 12px; }
-    #userInfo { padding: 4px 8px; max-width: 150px; overflow: hidden; }
+    /* Header Mobile */
+    .auth-btn button { padding: 6px 10px; font-size: 11px; }
+    #userInfo { padding: 4px 10px; max-width: 140px; }
+    #userInfo b { display: none; } /* Sembunyikan label 'User:' di HP sempit */
 
-    /* Susun tombol secara vertikal atau grid kecil */
-    .row { flex-direction: column; gap: 8px; }
-    .row select, .row button { 
-        width: 100% !important; 
-        flex: none; 
-        height: 45px;
+    /* Pengaturan Baris Tombol agar tetap Sejajar */
+    .row { 
+        flex-direction: row !important; 
+        gap: 5px; 
     }
     
-    /* Perkecil Button agar tidak "makan tempat" */
-    .row button, #generatePosterBtn {
+    .row select {
+        flex: 1.5;
+        font-size: 11px;
+        height: 40px;
+    }
+
+    .row button {
+        flex: 1;
+        font-size: 11px;
+        padding: 10px 2px;
+    }
+
+    #generatePosterBtn {
+        font-size: 12px;
         padding: 10px;
-        font-size: 13px;
-        border-radius: 10px;
     }
-
-    .language-bar select { font-size: 12px; padding: 6px; }
 }
