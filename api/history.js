@@ -14,7 +14,7 @@ let db;
 async function connectDB() {
     if (!db) {
         await client.connect();
-        db = client.db("tts_web"); // Nama database sesuai instruksi Sam
+        db = client.db("tts_web"); 
     }
     return db;
 }
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         const collection = database.collection("histories");
 
         // ==========================
-        // 1. ADD HISTORY (POST)
+        // 1. ADD HISTORY (POST) - DENGAN PROTEKSI DUPLIKAT
         // ==========================
         if (method === "POST") {
             const { username, text, result } = req.body;
@@ -39,11 +39,22 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Data tidak lengkap" });
             }
 
+            // --- PROTEKSI DUPLIKAT (CEK DATA TERAKHIR) ---
+            const lastEntry = await collection.findOne(
+                { username: username }, 
+                { sort: { date: -1 } }
+            );
+
+            // Jika teks dan hasil sama persis dengan yang terakhir, jangan simpan lagi
+            if (lastEntry && lastEntry.text === text && lastEntry.result === result) {
+                return res.status(200).json({ message: "Data duplikat terdeteksi, skip penyimpanan" });
+            }
+
             await collection.insertOne({
                 username,
                 text,
                 result,
-                date: new Date() // Menggunakan field 'date' agar sinkron dengan UI
+                date: new Date() 
             });
 
             return res.status(200).json({ message: "History tersimpan" });
@@ -53,7 +64,7 @@ export default async function handler(req, res) {
         // 2. GET HISTORY PER USER (GET)
         // ==========================
         if (method === "GET") {
-            const { user } = req.query; // Sesuai dengan fetch(`/api/history?user=${user}`)
+            const { user } = req.query; 
 
             if (!user) {
                 return res.status(400).json({ error: "Username dibutuhkan" });
