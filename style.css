@@ -13,6 +13,7 @@
     --dark-bg: #1e1e1e;
     --card-bg: rgba(255, 255, 255, 0.08);
     --accent-color: #00ffd5;
+    --download-bg: #28a745;
 }
 
 /* BODY */
@@ -200,9 +201,29 @@ textarea {
     cursor: pointer;
 }
 
+/* STYLE BARU UNTUK DOWNLOAD BUTTON */
+#downloadBtn {
+    background: var(--download-bg);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 25px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    transition: all 0.3s ease;
+}
+
 button:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
+}
+
+#downloadBtn:hover {
+    background: #218838;
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
 }
 
 /* HISTORY SECTION */
@@ -279,8 +300,9 @@ button:hover {
         padding: 10px 2px;
     }
 
-    #generatePosterBtn {
+    #generatePosterBtn, #downloadBtn {
+        width: 100%;
         font-size: 12px;
-        padding: 10px;
+        padding: 12px;
     }
 }
