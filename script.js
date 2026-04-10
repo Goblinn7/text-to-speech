@@ -30,12 +30,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const delay = 800;
     let controller;
 
+    // Tambahkan flag untuk mencegah double save tanpa merusak struktur baris lain
+    let isSaving = false;
+
     // ==========================
     // SAFE HISTORY (API VERSION)
     // ==========================
     async function safeSaveHistory(text, result="") {
+        if (isSaving) return; // Kunci jika sedang proses menyimpan
+        
         const user = localStorage.getItem("currentUser");
         if (!user) return;
+
+        isSaving = true; // Set kunci aktif
 
         try {
             // Mengarahkan ke endpoint API yang benar
@@ -60,6 +67,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (typeof saveHistory === "function") {
                 saveHistory(text, result);
             }
+        } finally {
+            isSaving = false; // Buka kunci setelah selesai (berhasil/gagal)
         }
     }
 
@@ -324,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     ctx.fillText("Translation", canvas.width / 2, 450);
 
                     ctx.fillStyle = "#E0E0E0";
-                    wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
+                    ctx.wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
                 }
 
                 resolve();
@@ -375,6 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
         speech.text = text;
         window.speechSynthesis.speak(speech);
 
+        // Memanggil fungsi save history satu kali saja
         safeSaveHistory(text, translatedText || "Poster Generated");
     };
 

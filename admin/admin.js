@@ -27,8 +27,8 @@ async function fetchUsers() {
 async function fetchHistories() {
     try {
         // Diarahkan ke /api/history sesuai file history.js di folder api kamu
-        // Kita ambil semua data history sekaligus untuk diolah di sisi client
-        const res = await fetch("/api/history");
+        // Menambahkan parameter admin=true agar backend tahu ini request global
+        const res = await fetch("/api/history?admin=true");
         const data = await res.json();
         return data.histories || data; 
     } catch (err) {
