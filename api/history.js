@@ -61,11 +61,22 @@ export default async function handler(req, res) {
         }
 
         // ==========================
-        // 2. GET HISTORY PER USER (GET)
+        // 2. GET HISTORY (GET) - SEKARANG MENDUKUNG ADMIN
         // ==========================
         if (method === "GET") {
-            const { user } = req.query; 
+            const { user, admin } = req.query; 
 
+            // --- LOGIKA BARU UNTUK ADMIN ---
+            // Jika request mengandung parameter admin=true, berikan SEMUA history
+            if (admin === "true") {
+                const allHistories = await collection
+                    .find({}) // Tanpa filter username
+                    .sort({ date: -1 })
+                    .toArray();
+                return res.status(200).json(allHistories);
+            }
+
+            // --- LOGIKA UNTUK USER BIASA ---
             if (!user) {
                 return res.status(400).json({ error: "Username dibutuhkan" });
             }
