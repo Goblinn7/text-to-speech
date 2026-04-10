@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
 // ==============================
 // CONFIG MONGODB
@@ -14,7 +14,7 @@ let db;
 async function connectDB() {
     if (!db) {
         await client.connect();
-        db = client.db("tts_app"); // nama database bebas
+        db = client.db("tts_web"); // Nama database sesuai instruksi Sam
     }
     return db;
 }
@@ -23,7 +23,6 @@ async function connectDB() {
 // HANDLER
 // ==============================
 export default async function handler(req, res) {
-
     const { method } = req;
 
     try {
@@ -31,7 +30,7 @@ export default async function handler(req, res) {
         const collection = database.collection("histories");
 
         // ==========================
-        // ADD HISTORY
+        // 1. ADD HISTORY (POST)
         // ==========================
         if (method === "POST") {
             const { username, text, result } = req.body;
@@ -44,48 +43,59 @@ export default async function handler(req, res) {
                 username,
                 text,
                 result,
-                createdAt: new Date()
+                date: new Date() // Menggunakan field 'date' agar sinkron dengan UI
             });
 
             return res.status(200).json({ message: "History tersimpan" });
         }
 
         // ==========================
-        // GET HISTORY PER USER
+        // 2. GET HISTORY PER USER (GET)
         // ==========================
         if (method === "GET") {
-            const { username } = req.query;
+            const { user } = req.query; // Sesuai dengan fetch(`/api/history?user=${user}`)
 
-            if (!username) {
+            if (!user) {
                 return res.status(400).json({ error: "Username dibutuhkan" });
             }
 
             const histories = await collection
-                .find({ username })
-                .sort({ createdAt: -1 })
+                .find({ username: user })
+                .sort({ date: -1 })
                 .toArray();
 
             return res.status(200).json(histories);
         }
 
         // ==========================
-        // DELETE ALL HISTORY USER
+        // 3. DELETE HISTORY (DELETE)
         // ==========================
         if (method === "DELETE") {
-            const { username } = req.body;
+            const { id, user } = req.query;
 
-            await collection.deleteMany({ username });
+            // Hapus Satu Item berdasarkan ID
+            if (id) {
+                await collection.deleteOne({ _id: new ObjectId(id) });
+                return res.status(200).json({ message: "Item dihapus" });
+            }
 
-            return res.status(200).json({ message: "History dihapus" });
+            // Hapus Semua Item berdasarkan User
+            if (user) {
+                await collection.deleteMany({ username: user });
+                return res.status(200).json({ message: "Semua history user dihapus" });
+            }
+
+            return res.status(400).json({ error: "ID atau User dibutuhkan" });
         }
 
         // ==========================
         // METHOD NOT ALLOWED
         // ==========================
-        return res.status(405).json({ error: "Method tidak diizinkan" });
+        res.setHeader("Allow", ["GET", "POST", "DELETE"]);
+        return res.status(405).json({ error: `Method ${method} tidak diizinkan` });
 
     } catch (error) {
-        console.error("ERROR:", error);
-        return res.status(500).json({ error: "Server error" });
+        console.error("DATABASE ERROR:", error);
+        return res.status(500).json({ error: "Gagal terhubung ke database" });
     }
 }

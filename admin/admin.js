@@ -27,12 +27,13 @@ async function fetchUsers() {
 async function fetchHistories() {
     try {
         // Diarahkan ke /api/history sesuai file history.js di folder api kamu
+        // Kita ambil semua data history sekaligus untuk diolah di sisi client
         const res = await fetch("/api/history");
         const data = await res.json();
-        return data.histories || {};
+        return data.histories || data; 
     } catch (err) {
         console.error("Fetch Histories Error:", err);
-        return {};
+        return [];
     }
 }
 
@@ -70,7 +71,8 @@ async function renderAdminPanel() {
         userDiv.style.borderRadius = "10px";
         userDiv.style.borderLeft = "5px solid #ffcc00";
 
-        const userHistory = histories[user.username] || [];
+        // Filter history dari array data MongoDB berdasarkan username
+        const userHistory = Array.isArray(histories) ? histories.filter(h => h.username === user.username) : [];
 
         userDiv.innerHTML = `
             <h3 style="margin-top:0;">👤 ${user.username} (${user.role})</h3>
@@ -107,7 +109,7 @@ function renderUserHistory(historyList) {
         <div style="margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:8px;">
             <p style="margin:0; font-size:14px;"><b>Text:</b> ${item.text}</p>
             ${item.result ? `<p style="margin:5px 0 0 0; font-size:14px; color:#4db8ff;"><b>Result:</b> ${item.result}</p>` : ""}
-            <small style="color:#777;">${item.date || 'Tanggal tidak tersedia'}</small>
+            <small style="color:#777;">${item.date ? new Date(item.date).toLocaleString('id-ID') : 'Tanggal tidak tersedia'}</small>
         </div>
     `).join("");
 }
@@ -125,12 +127,12 @@ async function deleteUser(username) {
 
     try {
         // Menggunakan endpoint /api/users dengan method DELETE agar sesuai standar CRUD
-        const res = await fetch("/api/users", {
+        // Sekarang menggunakan query parameter agar sinkron dengan backend
+        const res = await fetch(`/api/users?username=${username}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ username })
+            }
         });
 
         const data = await res.json();
@@ -155,16 +157,12 @@ async function clearUserHistory(username) {
     if (!confirm(`Hapus seluruh riwayat aktivitas untuk user "${username}"?`)) return;
 
     try {
-        // Menggunakan endpoint /api/history dengan method DELETE
-        const res = await fetch("/api/history", {
+        // Menggunakan endpoint /api/history dengan method DELETE dan query user
+        const res = await fetch(`/api/history?user=${username}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ 
-                username: username,
-                action: "clear_user_history" // Flag tambahan jika diperlukan di backend
-            })
+            }
         });
 
         const data = await res.json();

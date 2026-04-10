@@ -31,24 +31,32 @@ document.addEventListener("DOMContentLoaded", () => {
     let controller;
 
     // ==========================
-    // SAFE HISTORY (LOCAL / API)
+    // SAFE HISTORY (API VERSION)
     // ==========================
     async function safeSaveHistory(text, result="") {
         const user = localStorage.getItem("currentUser");
         if (!user) return;
 
         try {
-            // JIKA SUDAH PAKAI BACKEND
-            const res = await fetch("/api/history/add", {
+            // Mengarahkan ke endpoint API yang benar
+            const res = await fetch("/api/history", {
                 method: "POST",
                 headers: {"Content-Type":"application/json"},
                 body: JSON.stringify({ username: user, text, result })
             });
 
-            if (!res.ok) throw new Error();
+            if (res.ok) {
+                // Memanggil fungsi renderHistory jika ada di file lain (misal di history.js)
+                // agar list history di UI langsung ter-update
+                if (typeof renderHistory === "function") {
+                    renderHistory();
+                }
+            } else {
+                throw new Error("Gagal menyimpan ke server");
+            }
 
-        } catch {
-            // FALLBACK KE LOCALSTORAGE
+        } catch (err) {
+            console.warn("API Error, mencoba fallback ke LocalStorage:", err);
             if (typeof saveHistory === "function") {
                 saveHistory(text, result);
             }
