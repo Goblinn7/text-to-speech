@@ -213,8 +213,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function checkGrammarLT(text) {
+        // Logika Filter Dosen: Jangan koreksi jika input hanya 1-3 kata (Indikasi nama objek wisata)
+        const isLikelyProperName = text.trim().split(/\s+/).length <= 3;
 
-        if (!text.trim() || !previewBox || !loading) {
+        if (!text.trim() || isLikelyProperName || !previewBox || !loading) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
@@ -245,9 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const matches = [...data.matches].reverse();
 
                 matches.forEach(match => {
+                    const start = match.offset;
+                    const end = match.offset + match.length;
+                    const originalWord = text.substring(start, end);
+
+                    // Filter tambahan: Jika kata diawali huruf Kapital, jangan dikoreksi (Proper Noun)
+                    if (/^[A-Z]/.test(originalWord)) return;
+
                     if (match.replacements.length > 0) {
-                        const start = match.offset;
-                        const end = match.offset + match.length;
                         const replacement = match.replacements[0].value;
 
                         correctedText =
@@ -287,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (error.name === 'AbortError') return;
 
             loading.style.display = "none";
-            previewBox.style.display = "none";
+            if(previewBox) previewBox.style.display = "none";
         }
     }
 
@@ -333,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     ctx.fillText("Translation", canvas.width / 2, 450);
 
                     ctx.fillStyle = "#E0E0E0";
-                    ctx.wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
+                    wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
                 }
 
                 resolve();
