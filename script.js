@@ -213,10 +213,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function checkGrammarLT(text) {
+        // Logika Filter: Daftar kata aman agar tidak dirusak AI (Sidoarjo Pride)
+        const localWhitelist = ["jayandaru", "sidoarjo", "pari", "sumur", "dermo", "samudra", "umsida"];
+        const hasLocalWord = localWhitelist.some(word => text.toLowerCase().includes(word));
+        
         // Logika Filter Dosen: Jangan koreksi jika input hanya 1-3 kata (Indikasi nama objek wisata)
         const isLikelyProperName = text.trim().split(/\s+/).length <= 3;
 
-        if (!text.trim() || isLikelyProperName || !previewBox || !loading) {
+        // Jika mengandung kata lokal ATAU teks pendek, langsung sembunyikan koreksi
+        if (!text.trim() || isLikelyProperName || hasLocalWord || !previewBox || !loading) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
@@ -251,8 +256,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const end = match.offset + match.length;
                     const originalWord = text.substring(start, end);
 
-                    // Filter tambahan: Jika kata diawali huruf Kapital, jangan dikoreksi (Proper Noun)
-                    if (/^[A-Z]/.test(originalWord)) return;
+                    // Filter tambahan: Jika kata diawali huruf Kapital (Proper Noun) atau ada di whitelist, lewati
+                    if (/^[A-Z]/.test(originalWord) || localWhitelist.includes(originalWord.toLowerCase())) return;
 
                     if (match.replacements.length > 0) {
                         const replacement = match.replacements[0].value;
