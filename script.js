@@ -180,10 +180,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if(fromLang === toLang) toLang = (fromLang === "en") ? "id" : "en";
 
         try {
+            // Optimasi MyMemory API: Menambahkan de=email untuk identifikasi request yang lebih stabil
             const response = await fetch(
                 "https://api.mymemory.translated.net/get?q=" +
                 encodeURIComponent(text) +
-                "&langpair=" + fromLang + "|" + toLang
+                "&langpair=" + fromLang + "|" + toLang +
+                "&de=samudra.dicky@student.umsida.ac.id"
             );
 
             const data = await response.json();
