@@ -1,8 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ==========================
-    // INIT
-    // ==========================
+    // ==========================================
+    // INIT & DOM SELECTION
+    // ==========================================
     const speech = new SpeechSynthesisUtterance();
     let voices = [];
 
@@ -30,22 +30,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const delay = 800;
     let controller;
 
-    // Tambahkan flag untuk mencegah double save tanpa merusak struktur baris lain
+    // Flag untuk mencegah double save ke database
     let isSaving = false;
 
-    // ==========================
+    // ==========================================
     // SAFE HISTORY (API VERSION)
-    // ==========================
+    // ==========================================
     async function safeSaveHistory(text, result="") {
-        if (isSaving) return; // Kunci jika sedang proses menyimpan
+        
+        if (isSaving) return; 
         
         const user = localStorage.getItem("currentUser");
         if (!user) return;
 
-        isSaving = true; // Set kunci aktif
+        isSaving = true; 
 
         try {
-            // Mengarahkan ke endpoint API yang benar
+            // Mengarahkan ke endpoint API
             const res = await fetch("/api/history", {
                 method: "POST",
                 headers: {"Content-Type":"application/json"},
@@ -53,8 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (res.ok) {
-                // Memanggil fungsi renderHistory jika ada di file lain (misal di history.js)
-                // agar list history di UI langsung ter-update
+                // Update UI History jika fungsi tersedia
                 if (typeof renderHistory === "function") {
                     renderHistory();
                 }
@@ -68,13 +68,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 saveHistory(text, result);
             }
         } finally {
-            isSaving = false; // Buka kunci setelah selesai (berhasil/gagal)
+            isSaving = false; 
         }
     }
 
-    // ==========================
-    // SAFETY CHECK
-    // ==========================
+    // ==========================================
+    // SAFETY CHECK ELEMENT
+    // ==========================================
     function safe(el, name){
         if(!el){
             console.error(`❌ Element #${name} tidak ditemukan`);
@@ -87,9 +87,9 @@ document.addEventListener("DOMContentLoaded", () => {
     safe(listenBtn,"listenBtn");
     safe(downloadBtn,"downloadBtn");
 
-    // ==========================
-    // BACKGROUND THEMES
-    // ==========================
+    // ==========================================
+    // BACKGROUND THEMES (SIDOARJO HERITAGE)
+    // ==========================================
     const themeBackgrounds = {
         sunset: "images/jayandaru.png",
         ocean: "images/candi_sumur.png",
@@ -97,32 +97,34 @@ document.addEventListener("DOMContentLoaded", () => {
         nature: "images/candi_pari.png"
     };
 
-    // ==========================
-    // LANGUAGE SWAP
-    // ==========================
+    // ==========================================
+    // LANGUAGE SWAP LOGIC
+    // ==========================================
     swapBtn?.addEventListener("click", () => {
         [fromLangSelect.value, toLangSelect.value] =
         [toLangSelect.value, fromLangSelect.value];
     });
 
-    // ==========================
-    // SIMPLE LANGUAGE DETECT
-    // ==========================
+    // ==========================================
+    // SIMPLE LANGUAGE DETECT (PREVENT AI ERRORS)
+    // ==========================================
     function detectLanguage(text){
         const indonesianWords = [
             "saya","nama","kamu","dia","makan","minum",
-            "rumah","sekolah","belajar","halo"
+            "rumah","sekolah","belajar","halo","tuhan","percaya","rencana"
         ];
+        
         const lower = text.toLowerCase();
+        
         for(let word of indonesianWords){
             if(lower.includes(word)) return "id";
         }
         return "en";
     }
 
-    // ==========================
-    // LOAD VOICES
-    // ==========================
+    // ==========================================
+    // SPEECH SYNTHESIS: LOAD VOICES
+    // ==========================================
     window.speechSynthesis.onvoiceschanged = () => {
         voices = window.speechSynthesis.getVoices();
 
@@ -142,9 +144,9 @@ document.addEventListener("DOMContentLoaded", () => {
         speech.voice = voices[voiceSelect.value];
     });
 
-    // ==========================
-    // PLAY AUDIO
-    // ==========================
+    // ==========================================
+    // LISTEN BUTTON: PLAY AUDIO
+    // ==========================================
     listenBtn?.addEventListener("click", () => {
         if(!textarea) return;
 
@@ -158,9 +160,9 @@ document.addEventListener("DOMContentLoaded", () => {
         safeSaveHistory(text, "🔊 Played Audio");
     });
 
-    // ==========================
-    // TRANSLATE FEATURE
-    // ==========================
+    // ==========================================
+    // TRANSLATE FEATURE (MYMEMORY API)
+    // ==========================================
     translateBtn?.addEventListener("click", async () => {
 
         if(!textarea || !translationResult) return;
@@ -191,7 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
             safeSaveHistory(text, translatedText);
             return; 
         }
-        // --------------------------------------
 
         translationResult.innerHTML = "Translating...";
 
@@ -199,10 +200,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let toLang = toLangSelect.value;
 
         if(fromLang === "auto") fromLang = detectLanguage(text);
+        
         if(fromLang === toLang) toLang = (fromLang === "en") ? "id" : "en";
 
         try {
-            // Optimasi MyMemory: Menggunakan de=email dan format yang lebih stabil
             const response = await fetch(
                 "https://api.mymemory.translated.net/get?q=" +
                 encodeURIComponent(text) +
@@ -221,14 +222,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             safeSaveHistory(text, translatedText);
 
-        } catch {
+        } catch (err) {
             translationResult.innerHTML = "❌ Translation failed";
+            console.error(err);
         }
     });
 
-    // ==========================
-    // AUTO GRAMMAR CHECK
-    // ==========================
+    // ==========================================
+    // AUTO GRAMMAR CHECK (LANGUAGETOOL API)
+    // ==========================================
     textarea?.addEventListener("input", () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
@@ -237,7 +239,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function checkGrammarLT(text) {
-        // --- LOGIKA BARU: CONTEXTUAL TYPO FIXER (GOD vs GOOD) ---
+        
+        // 1. Cek apakah teks kosong
+        if (!text.trim()) {
+            if(previewBox) previewBox.style.display = "none";
+            return;
+        }
+
+        // 2. Cek apakah teks Bahasa Indonesia (AI Correction dimatikan jika Indo)
+        if (detectLanguage(text) === "id") {
+            if(previewBox) previewBox.style.display = "none";
+            return;
+        }
+
+        // --- CONTEXTUAL TYPO FIXER ---
         const typoContexts = {
             "god morning": "good morning",
             "god afternoon": "good afternoon",
@@ -249,22 +264,22 @@ document.addEventListener("DOMContentLoaded", () => {
         let processedText = text;
         const lowerInput = text.toLowerCase();
 
-        // Cek apakah ada kesalahan konteks sapaan
         for (const [wrong, right] of Object.entries(typoContexts)) {
             if (lowerInput.includes(wrong)) {
                 processedText = text.replace(new RegExp(wrong, 'gi'), right);
             }
         }
 
-        // Logika Filter: Daftar kata aman agar tidak dirusak AI (Sidoarjo Pride)
+        // Whitelist Kata Lokal Sidoarjo
         const localWhitelist = ["jayandaru", "sidoarjo", "pari", "sumur", "dermo", "samudra", "umsida"];
-        const hasLocalWord = localWhitelist.some(word => processedText.toLowerCase().includes(word));
         
-        // Logika Filter Dosen: Jangan koreksi jika input hanya 1-3 kata (Indikasi nama objek wisata)
+        const hasLocalWord = localWhitelist.some(word => 
+            processedText.toLowerCase().includes(word)
+        );
+        
         const isLikelyProperName = processedText.trim().split(/\s+/).length <= 3;
 
-        // Jika mengandung kata lokal ATAU teks pendek, langsung sembunyikan koreksi
-        if (!processedText.trim() || isLikelyProperName || hasLocalWord || !previewBox || !loading) {
+        if (isLikelyProperName || hasLocalWord || !previewBox || !loading) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
@@ -286,7 +301,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const data = await response.json();
-
             loading.style.display = "none";
 
             if (data.matches && data.matches.length > 0) {
@@ -299,16 +313,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     const end = match.offset + match.length;
                     const originalWord = processedText.substring(start, end);
 
-                    // Filter tambahan: Jika kata diawali huruf Kapital (Proper Noun) atau ada di whitelist, lewati
-                    if (/^[A-Z]/.test(originalWord) || localWhitelist.includes(originalWord.toLowerCase())) return;
+                    if (/^[A-Z]/.test(originalWord) || localWhitelist.includes(originalWord.toLowerCase())) {
+                        return;
+                    }
 
                     if (match.replacements.length > 0) {
                         const replacement = match.replacements[0].value;
-
-                        correctedText =
-                            correctedText.substring(0, start) +
-                            replacement +
-                            correctedText.substring(end);
+                        correctedText = correctedText.substring(0, start) + replacement + correctedText.substring(end);
                     }
                 });
 
@@ -328,14 +339,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 previewBox.onclick = () => {
                     textarea.value = correctedText;
                     previewBox.style.display = "none";
-
-                    if(canvas.style.display === "block") {
-                        drawPoster(correctedText);
-                    }
+                    if(canvas.style.display === "block") drawPoster(correctedText);
                 };
 
             } else {
-                // Kasus khusus: Jika API tidak menemukan error tapi filter lokal kita menemukan "god" -> "good"
                 if (processedText !== text) {
                     previewBox.style.display = "block";
                     previewBox.innerHTML = `✨ AI Correction: <span style="color:#00ffd5;font-weight:bold;cursor:pointer;">${processedText}</span>`;
@@ -350,45 +357,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (error) {
             if (error.name === 'AbortError') return;
-
             loading.style.display = "none";
             if(previewBox) previewBox.style.display = "none";
         }
     }
 
-    // ==========================
-    // DRAW POSTER
-    // ==========================
+    // ==========================================
+    // POSTER ENGINE: DRAW ON CANVAS
+    // ==========================================
     function drawPoster(text) {
         return new Promise((resolve) => {
-
             if(!canvas) return;
-
             const ctx = canvas.getContext("2d");
-
+            
             canvas.width = 800;
             canvas.height = 1000;
-
+            
             const img = new Image();
-
+            
             img.onload = () => {
-
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
+                
                 ctx.fillStyle = "rgba(0,0,0,0.5)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+                
                 ctx.textAlign = "center";
-
                 ctx.fillStyle = "white";
                 ctx.font = "bold 42px Arial";
                 ctx.fillText("English Learning Mode", canvas.width / 2, 80);
-
+                
                 ctx.fillStyle = "#cccccc";
                 ctx.font = "bold 24px Arial";
                 ctx.fillText("Original", canvas.width / 2, 160);
-
+                
                 ctx.fillStyle = "white";
                 ctx.font = "28px Arial";
                 wrapText(ctx, text, canvas.width / 2, 200, 700, 40);
@@ -396,14 +398,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (translatedText) {
                     ctx.fillStyle = "#cccccc";
                     ctx.fillText("Translation", canvas.width / 2, 450);
-
                     ctx.fillStyle = "#E0E0E0";
                     wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
                 }
-
                 resolve();
             };
-
             img.src = themeBackgrounds[posterTheme.value];
         });
     }
@@ -411,11 +410,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(" ");
         let line = "";
-
         for (let n = 0; n < words.length; n++) {
             const testLine = line + words[n] + " ";
             const testWidth = ctx.measureText(testLine).width;
-
             if (testWidth > maxWidth && n > 0) {
                 ctx.fillText(line, x, y);
                 line = words[n] + " ";
@@ -424,38 +421,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 line = testLine;
             }
         }
-
         ctx.fillText(line, x, y);
     }
 
-    // ==========================
-    // GENERATE POSTER
-    // ==========================
+    // ==========================================
+    // ACTION: GENERATE POSTER
+    // ==========================================
     window.generatePoster = async function () {
-
         if(!textarea || !canvas) return;
-
         const text = textarea.value.trim();
-
         if (!text) return alert("Please write text first!");
-
+        
         canvas.style.display = "block";
-
         await drawPoster(text);
-
         downloadBtn.style.display = "inline-block";
-
+        
         window.speechSynthesis.cancel();
         speech.text = text;
         window.speechSynthesis.speak(speech);
-
-        // Memanggil fungsi save history satu kali saja
+        
         safeSaveHistory(text, translatedText || "Poster Generated");
     };
 
-    // ==========================
-    // DOWNLOAD
-    // ==========================
+    // ==========================================
+    // ACTION: DOWNLOAD POSTER
+    // ==========================================
     window.downloadPoster = function() {
         const link = document.createElement('a');
         link.download = 'Poster-Sidoarjo-TTS.png';
