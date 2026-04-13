@@ -255,6 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- CONTEXTUAL TYPO & GRAMMAR FIXER ---
         const fixes = {
+            " i a ": " is a ", // Solusi untuk "Jayandaru i a good monument"
             "god morning": "good morning",
             "god afternoon": "good afternoon",
             "god evening": "good evening",
@@ -318,8 +319,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const end = match.offset + match.length;
                     const originalWord = processedText.substring(start, end);
 
-                    // Skip jika kata diawali huruf kapital (Nama) atau ada di whitelist
-                    if (/^[A-Z]/.test(originalWord) || localWhitelist.includes(originalWord.toLowerCase())) {
+                    // Skip jika kata diawali huruf kapital di tengah kalimat (Nama Orang/Entitas)
+                    if ((start > 0 && /^[A-Z]/.test(originalWord)) || localWhitelist.includes(originalWord.toLowerCase())) {
                         return;
                     }
 
