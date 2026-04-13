@@ -106,12 +106,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================
-    // SIMPLE LANGUAGE DETECT (PREVENT AI ERRORS)
+    // LANGUAGE DETECT (UPDATED FOR INDO PHRASES)
     // ==========================================
     function detectLanguage(text){
         const indonesianWords = [
-            "saya","nama","kamu","dia","makan","minum",
-            "rumah","sekolah","belajar","halo","tuhan","percaya","rencana"
+            "saya","nama","kamu","dia","makan","minum","ini","itu",
+            "rumah","sekolah","belajar","halo","tuhan","percaya","rencana",
+            "terbaik","untukku","adalah","yang","dengan","milik"
         ];
         
         const lower = text.toLowerCase();
@@ -246,38 +247,42 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 2. Cek apakah teks Bahasa Indonesia (AI Correction dimatikan jika Indo)
+        // 2. Cek apakah teks Bahasa Indonesia
         if (detectLanguage(text) === "id") {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
-        // --- CONTEXTUAL TYPO FIXER ---
-        const typoContexts = {
+        // --- CONTEXTUAL TYPO & GRAMMAR FIXER ---
+        const fixes = {
             "god morning": "good morning",
             "god afternoon": "good afternoon",
             "god evening": "good evening",
             "god night": "good night",
-            "god luck": "good luck"
+            "god luck": "good luck",
+            "i going": "I am going",
+            "i eating": "I am eating",
+            "i working": "I am working"
         };
 
         let processedText = text;
         const lowerInput = text.toLowerCase();
 
-        for (const [wrong, right] of Object.entries(typoContexts)) {
+        // Cek pattern manual sebelum ke API
+        for (const [wrong, right] of Object.entries(fixes)) {
             if (lowerInput.includes(wrong)) {
                 processedText = text.replace(new RegExp(wrong, 'gi'), right);
             }
         }
 
-        // Whitelist Kata Lokal Sidoarjo
+        // Whitelist Kata Lokal Sidoarjo & Kampus
         const localWhitelist = ["jayandaru", "sidoarjo", "pari", "sumur", "dermo", "samudra", "umsida"];
         
         const hasLocalWord = localWhitelist.some(word => 
             processedText.toLowerCase().includes(word)
         );
         
-        const isLikelyProperName = processedText.trim().split(/\s+/).length <= 3;
+        const isLikelyProperName = processedText.trim().split(/\s+/).length <= 2;
 
         if (isLikelyProperName || hasLocalWord || !previewBox || !loading) {
             if(previewBox) previewBox.style.display = "none";
@@ -313,6 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const end = match.offset + match.length;
                     const originalWord = processedText.substring(start, end);
 
+                    // Skip jika kata diawali huruf kapital (Nama) atau ada di whitelist
                     if (/^[A-Z]/.test(originalWord) || localWhitelist.includes(originalWord.toLowerCase())) {
                         return;
                     }
@@ -343,6 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
 
             } else {
+                // Fallback jika API tidak deteksi tapi manual fixer ada perubahan
                 if (processedText !== text) {
                     previewBox.style.display = "block";
                     previewBox.innerHTML = `✨ AI Correction: <span style="color:#00ffd5;font-weight:bold;cursor:pointer;">${processedText}</span>`;
@@ -407,6 +414,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ==========================================
+    // WRAP TEXT LOGIC FOR CANVAS
+    // ==========================================
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(" ");
         let line = "";
@@ -440,6 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
         speech.text = text;
         window.speechSynthesis.speak(speech);
         
+        // Memanggil fungsi save history satu kali saja
         safeSaveHistory(text, translatedText || "Poster Generated");
     };
 
