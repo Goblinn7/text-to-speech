@@ -46,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
         isSaving = true; 
 
         try {
-            // Mengarahkan ke endpoint API
             const res = await fetch("/api/history", {
                 method: "POST",
                 headers: {"Content-Type":"application/json"},
@@ -54,7 +53,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (res.ok) {
-                // Update UI History jika fungsi tersedia
                 if (typeof renderHistory === "function") {
                     renderHistory();
                 }
@@ -128,16 +126,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     window.speechSynthesis.onvoiceschanged = () => {
         voices = window.speechSynthesis.getVoices();
-
         if(!voiceSelect) return;
-
         voiceSelect.innerHTML = "";
-
         voices.forEach((voice, i) => {
             const option = new Option(`${voice.name} (${voice.lang})`, i);
             voiceSelect.appendChild(option);
         });
-
         if (voices.length > 0) speech.voice = voices[0];
     };
 
@@ -150,7 +144,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     listenBtn?.addEventListener("click", () => {
         if(!textarea) return;
-
         const text = textarea.value.trim();
         if (!text) return;
 
@@ -165,16 +158,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // TRANSLATE FEATURE (MYMEMORY API)
     // ==========================================
     translateBtn?.addEventListener("click", async () => {
-
         if(!textarea || !translationResult) return;
-
         const text = textarea.value.trim();
         if (!text) {
             alert("Please write text first!");
             return;
         }
 
-        // --- FILTER KHUSUS KALIMAT SINGKAT ---
         const shortPhrases = {
             "good morning": "Selamat pagi",
             "good afternoon": "Selamat siang",
@@ -196,12 +186,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         translationResult.innerHTML = "Translating...";
-
         let fromLang = fromLangSelect.value;
         let toLang = toLangSelect.value;
 
         if(fromLang === "auto") fromLang = detectLanguage(text);
-        
         if(fromLang === toLang) toLang = (fromLang === "en") ? "id" : "en";
 
         try {
@@ -211,18 +199,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 "&langpair=" + fromLang + "|" + toLang +
                 "&de=samudra.dicky@student.umsida.ac.id"
             );
-
             const data = await response.json();
-
             translatedText = data?.responseData?.translatedText || "Translation not available";
 
             translationResult.innerHTML = `
                 🌍 Detected: <b>${fromLang.toUpperCase()}</b><br>
                 🌍 Translation: <b>${translatedText}</b>
             `;
-
             safeSaveHistory(text, translatedText);
-
         } catch (err) {
             translationResult.innerHTML = "❌ Translation failed";
             console.error(err);
@@ -240,20 +224,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function checkGrammarLT(text) {
-        
-        // 1. Cek apakah teks kosong
         if (!text.trim()) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
-        // 2. Cek apakah teks Bahasa Indonesia
         if (detectLanguage(text) === "id") {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
-        // --- CONTEXTUAL TYPO & GRAMMAR FIXER (REFINED LOGIC) ---
         const manualFixes = [
             { reg: /\bi\b/g, rep: "I" },
             { reg: /\bi'm\b/gi, rep: "I'm" },
@@ -265,12 +245,10 @@ document.addEventListener("DOMContentLoaded", () => {
             { reg: /\bgod evening\b/gi, rep: "good evening" },
             { reg: /\bgod night\b/gi, rep: "good night" },
             { reg: /\bgod luck\b/gi, rep: "good luck" },
-            // Past Tense Verb Fixes
             { reg: /\bI go to (.+) yesterday\b/gi, rep: "I went to $1 yesterday" },
             { reg: /\bI did not saw\b/gi, rep: "I did not see" },
             { reg: /\bmy friend don't\b/gi, rep: "my friend doesn't" },
             { reg: /\bshe buy\b/gi, rep: "she buys" },
-            // Continuous Fixes
             { reg: /\bi going\b/gi, rep: "I am going" },
             { reg: /\bi eating\b/gi, rep: "I am eating" },
             { reg: /\bi working\b/gi, rep: "I am working" }
@@ -281,21 +259,17 @@ document.addEventListener("DOMContentLoaded", () => {
             processedText = processedText.replace(fix.reg, fix.rep);
         });
 
-        // Whitelist Kata Lokal Sidoarjo & Kampus
         const localWhitelist = ["candi", "jayandaru", "sidoarjo", "pari", "sumur", "dermo", "samudra", "umsida"];
-        
         const isLikelyProperName = processedText.trim().split(/\s+/).length <= 2;
 
         if (isLikelyProperName || !previewBox || !loading) {
             if(previewBox && processedText === text) previewBox.style.display = "none";
-            // Tampilkan koreksi jika manual fixer mengubah teks pendek
             if(previewBox && processedText !== text) showCorrection(processedText);
             return;
         }
 
         if (controller) controller.abort();
         controller = new AbortController();
-
         loading.style.display = "block";
 
         try {
@@ -313,7 +287,6 @@ document.addEventListener("DOMContentLoaded", () => {
             loading.style.display = "none";
 
             if (data.matches && data.matches.length > 0) {
-
                 let correctedText = processedText;
                 const matches = [...data.matches].reverse();
 
@@ -322,7 +295,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     const end = match.offset + match.length;
                     const originalWord = processedText.substring(start, end);
 
-                    // Skip jika kata diawali huruf kapital (Proper Noun) atau ada di whitelist
                     if ((start > 0 && /^[A-Z]/.test(originalWord)) || localWhitelist.includes(originalWord.toLowerCase())) {
                         return;
                     }
@@ -332,18 +304,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         correctedText = correctedText.substring(0, start) + replacement + correctedText.substring(end);
                     }
                 });
-
                 showCorrection(correctedText);
-
             } else {
-                // Fallback jika API tidak deteksi tapi manual fixer ada perubahan
                 if (processedText !== text) {
                     showCorrection(processedText);
                 } else {
                     previewBox.style.display = "none";
                 }
             }
-
         } catch (error) {
             if (error.name === 'AbortError') return;
             loading.style.display = "none";
@@ -351,7 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Helper function untuk menampilkan hasil koreksi
     function showCorrection(finalText) {
         if (finalText === textarea.value) {
             previewBox.style.display = "none";
@@ -383,6 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.height = 1000;
             
             const img = new Image();
+            img.crossOrigin = "anonymous"; // Penting agar tidak Tainted Canvas saat download
             
             img.onload = () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -394,9 +362,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 ctx.textAlign = "center";
                 ctx.fillStyle = "white";
                 ctx.font = "bold 42px Arial";
-                
-                ctx.fillStyle = "#cccccc";
-                ctx.font = "bold 24px Arial";
                 
                 ctx.fillStyle = "white";
                 ctx.font = "28px Arial";
@@ -412,9 +377,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ==========================================
-    // WRAP TEXT LOGIC FOR CANVAS
-    // ==========================================
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(" ");
         let line = "";
@@ -442,24 +404,43 @@ document.addEventListener("DOMContentLoaded", () => {
         
         canvas.style.display = "block";
         await drawPoster(text);
-        downloadBtn.style.display = "inline-block";
+        
+        if(downloadBtn) {
+            downloadBtn.style.display = "inline-block";
+        }
         
         window.speechSynthesis.cancel();
         speech.text = text;
         window.speechSynthesis.speak(speech);
         
-        // Memanggil fungsi save history satu kali saja
         safeSaveHistory(text, translatedText || "Poster Generated");
     };
 
     // ==========================================
-    // ACTION: DOWNLOAD POSTER
+    // ACTION: DOWNLOAD POSTER (FIXED & LINKED)
     // ==========================================
     window.downloadPoster = function() {
-        const link = document.createElement('a');
-        link.download = 'Poster-Sidoarjo-TTS.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        try {
+            if (canvas.style.display === "none") {
+                alert("Please generate the poster first!");
+                return;
+            }
+            const dataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'Poster-Sidoarjo-TTS.png';
+            link.href = dataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error("Download Error:", err);
+            alert("Failed to download image. Make sure images are loaded correctly.");
+        }
     };
+
+    // Binding event click ke tombol download jika ada di HTML
+    downloadBtn?.addEventListener("click", () => {
+        window.downloadPoster();
+    });
 
 });
