@@ -394,19 +394,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 ctx.textAlign = "center";
                 ctx.fillStyle = "white";
                 ctx.font = "bold 42px Arial";
-                ctx.fillText("English Learning Mode", canvas.width / 2, 80);
                 
                 ctx.fillStyle = "#cccccc";
                 ctx.font = "bold 24px Arial";
-                ctx.fillText("Original", canvas.width / 2, 160);
                 
                 ctx.fillStyle = "white";
                 ctx.font = "28px Arial";
                 wrapText(ctx, text, canvas.width / 2, 200, 700, 40);
 
                 if (translatedText) {
-                    ctx.fillStyle = "#cccccc";
-                    ctx.fillText("Translation", canvas.width / 2, 450);
                     ctx.fillStyle = "#E0E0E0";
                     wrapText(ctx, translatedText, canvas.width / 2, 500, 700, 40);
                 }
