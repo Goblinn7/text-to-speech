@@ -24,6 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const loading = document.getElementById("loading");
 
     let translatedText = ""; 
+    let detectedLang = "";
+
     let typingTimer;
     const delay = 800;
     let controller;
@@ -35,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // SAFE HISTORY (API VERSION)
     // ==========================================
     async function safeSaveHistory(text, result="") {
+        
         if (isSaving) return; 
         
         const user = localStorage.getItem("currentUser");
@@ -43,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isSaving = true; 
 
         try {
+            // Mengarahkan ke endpoint API
             const res = await fetch("/api/history", {
                 method: "POST",
                 headers: {"Content-Type":"application/json"},
@@ -50,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (res.ok) {
+                // Update UI History jika fungsi tersedia
                 if (typeof renderHistory === "function") {
                     renderHistory();
                 }
@@ -96,14 +101,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // LANGUAGE SWAP LOGIC
     // ==========================================
     swapBtn?.addEventListener("click", () => {
-        if(!fromLangSelect || !toLangSelect) return;
-        const temp = fromLangSelect.value;
-        fromLangSelect.value = toLangSelect.value;
-        toLangSelect.value = temp;
+        [fromLangSelect.value, toLangSelect.value] =
+        [toLangSelect.value, fromLangSelect.value];
     });
 
     // ==========================================
-    // LANGUAGE DETECT
+    // LANGUAGE DETECT (UPDATED FOR INDO PHRASES)
     // ==========================================
     function detectLanguage(text){
         const indonesianWords = [
@@ -113,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ];
         
         const lower = text.toLowerCase();
+        
         for(let word of indonesianWords){
             if(lower.includes(word)) return "id";
         }
@@ -122,11 +126,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     // SPEECH SYNTHESIS: LOAD VOICES
     // ==========================================
-    const loadVoices = () => {
+    window.speechSynthesis.onvoiceschanged = () => {
         voices = window.speechSynthesis.getVoices();
+
         if(!voiceSelect) return;
 
         voiceSelect.innerHTML = "";
+
         voices.forEach((voice, i) => {
             const option = new Option(`${voice.name} (${voice.lang})`, i);
             voiceSelect.appendChild(option);
@@ -134,9 +140,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (voices.length > 0) speech.voice = voices[0];
     };
-
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
 
     voiceSelect?.addEventListener("change", () => {
         speech.voice = voices[voiceSelect.value];
@@ -162,6 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // TRANSLATE FEATURE (MYMEMORY API)
     // ==========================================
     translateBtn?.addEventListener("click", async () => {
+
         if(!textarea || !translationResult) return;
 
         const text = textarea.value.trim();
@@ -170,6 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        // --- FILTER KHUSUS KALIMAT SINGKAT ---
         const shortPhrases = {
             "good morning": "Selamat pagi",
             "good afternoon": "Selamat siang",
@@ -196,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let toLang = toLangSelect.value;
 
         if(fromLang === "auto") fromLang = detectLanguage(text);
+        
         if(fromLang === toLang) toLang = (fromLang === "en") ? "id" : "en";
 
         try {
@@ -207,6 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             const data = await response.json();
+
             translatedText = data?.responseData?.translatedText || "Translation not available";
 
             translationResult.innerHTML = `
@@ -233,16 +240,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function checkGrammarLT(text) {
+        
+        // 1. Cek apakah teks kosong
         if (!text.trim()) {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
+        // 2. Cek apakah teks Bahasa Indonesia
         if (detectLanguage(text) === "id") {
             if(previewBox) previewBox.style.display = "none";
             return;
         }
 
+        // --- CONTEXTUAL TYPO & GRAMMAR FIXER (REFINED LOGIC) ---
         const manualFixes = [
             { reg: /\bi\b/g, rep: "I" },
             { reg: /\bi'm\b/gi, rep: "I'm" },
@@ -254,10 +265,12 @@ document.addEventListener("DOMContentLoaded", () => {
             { reg: /\bgod evening\b/gi, rep: "good evening" },
             { reg: /\bgod night\b/gi, rep: "good night" },
             { reg: /\bgod luck\b/gi, rep: "good luck" },
+            // Past Tense Verb Fixes
             { reg: /\bI go to (.+) yesterday\b/gi, rep: "I went to $1 yesterday" },
             { reg: /\bI did not saw\b/gi, rep: "I did not see" },
             { reg: /\bmy friend don't\b/gi, rep: "my friend doesn't" },
             { reg: /\bshe buy\b/gi, rep: "she buys" },
+            // Continuous Fixes
             { reg: /\bi going\b/gi, rep: "I am going" },
             { reg: /\bi eating\b/gi, rep: "I am eating" },
             { reg: /\bi working\b/gi, rep: "I am working" }
@@ -268,18 +281,22 @@ document.addEventListener("DOMContentLoaded", () => {
             processedText = processedText.replace(fix.reg, fix.rep);
         });
 
+        // Whitelist Kata Lokal Sidoarjo & Kampus
         const localWhitelist = ["candi", "jayandaru", "sidoarjo", "pari", "sumur", "dermo", "samudra", "umsida"];
+        
         const isLikelyProperName = processedText.trim().split(/\s+/).length <= 2;
 
-        if (isLikelyProperName && processedText === text) {
-            if(previewBox) previewBox.style.display = "none";
+        if (isLikelyProperName || !previewBox || !loading) {
+            if(previewBox && processedText === text) previewBox.style.display = "none";
+            // Tampilkan koreksi jika manual fixer mengubah teks pendek
+            if(previewBox && processedText !== text) showCorrection(processedText);
             return;
         }
 
         if (controller) controller.abort();
         controller = new AbortController();
 
-        if(loading) loading.style.display = "block";
+        loading.style.display = "block";
 
         try {
             const response = await fetch("https://api.languagetool.org/v2/check", {
@@ -293,46 +310,51 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const data = await response.json();
-            if(loading) loading.style.display = "none";
+            loading.style.display = "none";
 
             if (data.matches && data.matches.length > 0) {
+
                 let correctedText = processedText;
-                const matches = [...data.matches].sort((a, b) => b.offset - a.offset);
+                const matches = [...data.matches].reverse();
 
                 matches.forEach(match => {
                     const start = match.offset;
                     const end = match.offset + match.length;
                     const originalWord = processedText.substring(start, end);
 
+                    // Skip jika kata diawali huruf kapital (Proper Noun) atau ada di whitelist
                     if ((start > 0 && /^[A-Z]/.test(originalWord)) || localWhitelist.includes(originalWord.toLowerCase())) {
                         return;
                     }
 
-                    if (match.replacements && match.replacements.length > 0) {
+                    if (match.replacements.length > 0) {
                         const replacement = match.replacements[0].value;
                         correctedText = correctedText.substring(0, start) + replacement + correctedText.substring(end);
                     }
                 });
 
                 showCorrection(correctedText);
+
             } else {
+                // Fallback jika API tidak deteksi tapi manual fixer ada perubahan
                 if (processedText !== text) {
                     showCorrection(processedText);
-                } else if (previewBox) {
+                } else {
                     previewBox.style.display = "none";
                 }
             }
 
         } catch (error) {
             if (error.name === 'AbortError') return;
-            if(loading) loading.style.display = "none";
+            loading.style.display = "none";
             if(previewBox) previewBox.style.display = "none";
         }
     }
 
+    // Helper function untuk menampilkan hasil koreksi
     function showCorrection(finalText) {
-        if (!previewBox || finalText === textarea.value) {
-            if(previewBox) previewBox.style.display = "none";
+        if (finalText === textarea.value) {
+            previewBox.style.display = "none";
             return;
         }
         previewBox.style.display = "block";
@@ -345,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
         previewBox.onclick = () => {
             textarea.value = finalText;
             previewBox.style.display = "none";
-            if(canvas && canvas.style.display === "block") drawPoster(finalText);
+            if(canvas.style.display === "block") drawPoster(finalText);
         };
     }
 
@@ -354,13 +376,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     function drawPoster(text) {
         return new Promise((resolve) => {
-            if(!canvas) return resolve();
+            if(!canvas) return;
             const ctx = canvas.getContext("2d");
             
             canvas.width = 800;
             canvas.height = 1000;
             
             const img = new Image();
+            
             img.onload = () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -389,10 +412,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 resolve();
             };
-            img.src = themeBackgrounds[posterTheme.value] || themeBackgrounds.sunset;
+            img.src = themeBackgrounds[posterTheme.value];
         });
     }
 
+    // ==========================================
+    // WRAP TEXT LOGIC FOR CANVAS
+    // ==========================================
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(" ");
         let line = "";
@@ -411,7 +437,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // ACTIONS: GENERATE & DOWNLOAD
+    // ACTION: GENERATE POSTER
     // ==========================================
     window.generatePoster = async function () {
         if(!textarea || !canvas) return;
@@ -420,17 +446,20 @@ document.addEventListener("DOMContentLoaded", () => {
         
         canvas.style.display = "block";
         await drawPoster(text);
-        if(downloadBtn) downloadBtn.style.display = "inline-block";
+        downloadBtn.style.display = "inline-block";
         
         window.speechSynthesis.cancel();
         speech.text = text;
         window.speechSynthesis.speak(speech);
         
+        // Memanggil fungsi save history satu kali saja
         safeSaveHistory(text, translatedText || "Poster Generated");
     };
 
+    // ==========================================
+    // ACTION: DOWNLOAD POSTER
+    // ==========================================
     window.downloadPoster = function() {
-        if(!canvas) return;
         const link = document.createElement('a');
         link.download = 'Poster-Sidoarjo-TTS.png';
         link.href = canvas.toDataURL('image/png');
