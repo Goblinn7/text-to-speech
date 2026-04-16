@@ -23,20 +23,17 @@ async function connectDB() {
 // USERS HANDLER (ADMIN ONLY)
 // ==============================
 export default async function handler(req, res) {
-
     try {
         const database = await connectDB();
         const users = database.collection("users");
-
         const { method } = req;
 
         // ==========================
         // GET ALL USERS
         // ==========================
         if (method === "GET") {
-
             const allUsers = await users.find({}).project({
-                password: 0 // sembunyikan password
+                password: 0 // sembunyikan password demi keamanan
             }).toArray();
 
             return res.status(200).json(allUsers);
@@ -46,32 +43,35 @@ export default async function handler(req, res) {
         // DELETE USER
         // ==========================
         if (method === "DELETE") {
-
-            const { username } = req.body;
+            // Sam, di admin.js kamu kirim via ?username=..., jadi ambil dari req.query
+            const { username } = req.query;
 
             if (!username) {
-                return res.status(400).json({ error: "Username wajib" });
+                return res.status(400).json({ message: "Username wajib diisi" });
             }
 
-            // Jangan hapus admin
+            // Keamanan tambahan: Jangan hapus admin
             if (username === "admin") {
-                return res.status(403).json({ error: "Admin tidak bisa dihapus" });
+                return res.status(403).json({ message: "Akses Ditolak: Admin tidak bisa dihapus" });
             }
 
-            await users.deleteOne({ username });
+            const result = await users.deleteOne({ username });
 
-            return res.status(200).json({ message: "User berhasil dihapus" });
+            if (result.deletedCount === 0) {
+                return res.status(404).json({ message: "User tidak ditemukan di database" });
+            }
+
+            return res.status(200).json({ message: `User ${username} berhasil dihapus secara permanen` });
         }
 
         // ==========================
-        // UPDATE ROLE (OPTIONAL)
+        // UPDATE ROLE (PUT)
         // ==========================
         if (method === "PUT") {
-
             const { username, role } = req.body;
 
             if (!username || !role) {
-                return res.status(400).json({ error: "Data tidak lengkap" });
+                return res.status(400).json({ message: "Data tidak lengkap" });
             }
 
             await users.updateOne(
@@ -79,16 +79,16 @@ export default async function handler(req, res) {
                 { $set: { role } }
             );
 
-            return res.status(200).json({ message: "Role berhasil diupdate" });
+            return res.status(200).json({ message: "Role berhasil diperbarui" });
         }
 
         // ==========================
         // METHOD NOT ALLOWED
         // ==========================
-        return res.status(405).json({ error: "Method tidak diizinkan" });
+        return res.status(405).json({ message: "Method tidak diizinkan" });
 
     } catch (error) {
         console.error("USERS API ERROR:", error);
-        return res.status(500).json({ error: "Server error" });
+        return res.status(500).json({ message: "Terjadi kesalahan pada server (Server Error)" });
     }
 }
